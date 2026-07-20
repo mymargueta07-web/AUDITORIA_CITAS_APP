@@ -417,6 +417,89 @@
       margin-left: 10px;
     }
 
+    .duplicado-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.65);
+    }
+
+    .duplicado-modal {
+      width: min(620px, 100%);
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    .duplicado-modal h2 {
+      margin: 0;
+      padding: 20px 20px 10px;
+      color: #721c24;
+      font-size: 22px;
+    }
+
+    .duplicado-modal-contenido {
+      padding: 10px 20px;
+      overflow-y: auto;
+    }
+
+    .duplicado-modal-coincidencia {
+      margin-bottom: 12px;
+      padding: 12px;
+      color: #333;
+      background: #f8f9fa;
+      border-left: 4px solid #dc3545;
+      border-radius: 8px;
+      white-space: pre-line;
+    }
+
+    .duplicado-modal-acciones {
+      display: flex;
+      gap: 10px;
+      padding: 15px 20px 20px;
+    }
+
+    .duplicado-modal-acciones button {
+      width: auto;
+      flex: 1;
+      margin-top: 0;
+    }
+
+    .duplicado-modal-cancelar {
+      background: #6c757d;
+    }
+
+    .duplicado-modal-confirmar {
+      background: #dc3545;
+    }
+
+    @media(max-width: 600px) {
+      .duplicado-modal-overlay {
+        padding: 12px;
+      }
+
+      .duplicado-modal {
+        width: 90%;
+        max-height: 90vh;
+      }
+
+      .duplicado-modal-acciones {
+        flex-direction: column;
+      }
+
+      .duplicado-modal-acciones button {
+        width: 100%;
+      }
+    }
+
     @keyframes spin {
       to {
         transform: rotate(360deg);
@@ -617,6 +700,7 @@ let sucursalesDisponibles = [];
  */
 let citaGuardadaPendienteLimpieza = false;
 let guardadoEnCurso = false;
+let duplicadoPendiente = null;
 
   
   window.addEventListener('load', function() {
@@ -1197,11 +1281,11 @@ fechaFinal = `${dia}/${mes}/${anio}`;
   btn.innerHTML =
     'Guardando... <span class="loading"></span>';
 
-  ejecutarGuardado(datos, btn, originalText);
+  ejecutarGuardado(datos, btn, originalText, hora);
 
 }
 
-  function ejecutarGuardado(datos, btn, originalText) {
+  function ejecutarGuardado(datos, btn, originalText, hora) {
 
   google.script.run
 
@@ -1209,33 +1293,20 @@ fechaFinal = `${dia}/${mes}/${anio}`;
 
       if (respuesta.exito) {
 
-        // Bloquear nuevos envíos hasta limpiar
-        citaGuardadaPendienteLimpieza = true;
-
-        // Mostrar resumen
-        mostrarResumenCita(
-          datos,
-          hora,
-          respuesta.id
-        );
-
-        // Mantener botón deshabilitado
-        btn.disabled = true;
-
-        btn.innerText =
-          'Cita guardada';
+        procesarGuardadoExitoso(respuesta, datos, btn, hora);
 
       } else {
 
         guardadoEnCurso = false;
 
         if (respuesta.duplicado) {
-          mostrarAdvertenciaDuplicado(
-            respuesta,
-            datos,
-            btn,
-            originalText
-          );
+          duplicadoPendiente = {
+            datos: datos,
+            btn: btn,
+            originalText: originalText,
+            hora: hora
+          };
+          mostrarModalDuplicado(respuesta.coincidencias || [], datos);
           return;
         }
 
@@ -1274,22 +1345,30 @@ fechaFinal = `${dia}/${mes}/${anio}`;
 
 }
 
-  function mostrarAdvertenciaDuplicado(respuesta, datos, btn, originalText) {
-    const msgDiv = document.getElementById('mensaje');
-    const coincidencias = respuesta.coincidencias || [];
+  function mostrarModalDuplicado(coincidencias, datosOriginales) {
+    cerrarModalDuplicado();
 
-    msgDiv.innerHTML = '';
-    msgDiv.className = 'message error';
-    msgDiv.style.display = 'block';
+    const overlay = document.createElement('div');
+    overlay.id = 'duplicadoModalOverlay';
+    overlay.className = 'duplicado-modal-overlay';
 
-    const titulo = document.createElement('strong');
-    titulo.textContent = respuesta.mensaje || 'Ya existe una posible cita duplicada';
-    msgDiv.appendChild(titulo);
+    const modal = document.createElement('div');
+    modal.className = 'duplicado-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'duplicadoModalTitulo');
+
+    const titulo = document.createElement('h2');
+    titulo.id = 'duplicadoModalTitulo';
+    titulo.textContent = 'Ya existe una posible cita duplicada';
+    modal.appendChild(titulo);
+
+    const contenido = document.createElement('div');
+    contenido.className = 'duplicado-modal-contenido';
 
     coincidencias.forEach(function(cita) {
       const detalle = document.createElement('div');
-      detalle.style.marginTop = '12px';
-      detalle.style.textAlign = 'left';
+      detalle.className = 'duplicado-modal-coincidencia';
       detalle.textContent =
         'ID: ' + (cita.id || '') + '\n' +
         'Cliente: ' + (cita.cliente || '') + '\n' +
@@ -1300,51 +1379,91 @@ fechaFinal = `${dia}/${mes}/${anio}`;
         'Sucursal destino: ' + (cita.sucursalDestino || '') + '\n' +
         'Asesor: ' + (cita.asesor || '') + '\n' +
         'Estado: ' + (cita.estado || '');
-      detalle.style.whiteSpace = 'pre-line';
-      msgDiv.appendChild(detalle);
+      contenido.appendChild(detalle);
     });
 
+    modal.appendChild(contenido);
+
     const acciones = document.createElement('div');
-    acciones.className = 'acciones-resumen';
-    acciones.style.marginTop = '15px';
+    acciones.className = 'duplicado-modal-acciones';
 
     const cancelar = document.createElement('button');
     cancelar.type = 'button';
+    cancelar.className = 'duplicado-modal-cancelar';
     cancelar.textContent = 'Cancelar';
 
     const forzar = document.createElement('button');
     forzar.type = 'button';
+    forzar.className = 'duplicado-modal-confirmar';
     forzar.textContent = 'Guardar de todos modos';
 
     acciones.appendChild(cancelar);
     acciones.appendChild(forzar);
-    msgDiv.appendChild(acciones);
+    modal.appendChild(acciones);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
 
-    cancelar.addEventListener('click', function() {
-      guardadoEnCurso = false;
-      btn.disabled = false;
-      btn.innerText = originalText;
-      mostrarMensaje('Guardado cancelado', 'error');
-    });
+    cancelar.addEventListener('click', cancelarGuardadoDuplicado);
+    forzar.addEventListener('click', confirmarGuardadoDuplicado);
+    document.body.style.overflow = 'hidden';
+    cancelar.focus();
+  }
 
-    forzar.addEventListener('click', function() {
-      if (guardadoEnCurso) {
-        return;
-      }
+  function cerrarModalDuplicado() {
+    const overlay = document.getElementById('duplicadoModalOverlay');
+    if (overlay) {
+      overlay.remove();
+    }
+    document.body.style.overflow = '';
+  }
 
-      datos.forzarDuplicado = true;
-      guardadoEnCurso = true;
-      cancelar.disabled = true;
-      forzar.disabled = true;
-      btn.disabled = true;
-      btn.innerHTML = 'Guardando... <span class="loading"></span>';
-      ejecutarGuardado(datos, btn, originalText);
-    });
+  function cancelarGuardadoDuplicado() {
+    const contexto = duplicadoPendiente;
+    cerrarModalDuplicado();
+    guardadoEnCurso = false;
 
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+    if (contexto) {
+      contexto.btn.disabled = false;
+      contexto.btn.innerText = contexto.originalText;
+    }
+
+    duplicadoPendiente = null;
+  }
+
+  function confirmarGuardadoDuplicado() {
+    if (guardadoEnCurso || !duplicadoPendiente) {
+      return;
+    }
+
+    const contexto = duplicadoPendiente;
+    guardadoEnCurso = true;
+    contexto.datos.forzarDuplicado = true;
+    contexto.btn.disabled = true;
+    contexto.btn.innerHTML = 'Guardando... <span class="loading"></span>';
+    cerrarModalDuplicado();
+    duplicadoPendiente = null;
+
+    ejecutarGuardado(
+      contexto.datos,
+      contexto.btn,
+      contexto.originalText,
+      contexto.hora
+    );
+  }
+
+  function procesarGuardadoExitoso(respuesta, datos, btn, hora) {
+    cerrarModalDuplicado();
+    duplicadoPendiente = null;
+    citaGuardadaPendienteLimpieza = true;
+
+    mostrarResumenCita(
+      datos,
+      hora,
+      respuesta.id
+    );
+
+    btn.disabled = true;
+    btn.innerText = 'Cita guardada';
   }
   
   function mostrarResumenCita(datos, hora, id) {
