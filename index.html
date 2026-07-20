@@ -620,7 +620,11 @@
           </div>
           <div class="form-group">
             <label>Hora de la cita</label>
-            <input type="time" id="horaCita">
+            <input
+              type="text"
+              id="horaCita"
+              placeholder="Ejemplo: 02:30 PM"
+              inputmode="text">
           </div>
           <div class="form-group full-width">
 
@@ -1044,13 +1048,34 @@ op.dataset.nombre.includes(texto)
     document.getElementById('fechaCita').value;
 
   const horaInput =
-    document.getElementById('horaCita').value;
+    document.getElementById('horaCita').value.trim().toUpperCase();
+
+  let horaNormalizada = '';
+
+  if (horaInput) {
+    const partesHora = horaInput.match(
+      /^(0?[1-9]|1[0-2]):([0-5]\d)\s*(AM|PM)$/
+    );
+
+    if (!partesHora) {
+      mostrarMensaje(
+        'Ingrese la hora en formato de 12 horas, por ejemplo: 02:30 PM',
+        'error'
+      );
+      return;
+    }
+
+    horaNormalizada =
+      partesHora[1].padStart(2, '0') +
+      ':' + partesHora[2] +
+      ' ' + partesHora[3];
+  }
 
   const horaParaGuardar =
-    horaInput || '';
+    horaNormalizada;
 
   const horaParaResumen =
-    horaInput || 'No especificada';
+    horaNormalizada || 'No especificada';
 
 
   // =====================================================
