@@ -263,6 +263,93 @@ function obtenerAsesoresPorSucursal(sucursal) {
   return asesores;
 }
 
+function normalizarNumeroDuplicado_(numero) {
+  const texto = String(numero || '').trim();
+  let digitos = texto.replace(/\D/g, '');
+
+  if (/^\+503(?:\D|$)/.test(texto) && digitos.indexOf('503') === 0) {
+    digitos = digitos.slice(3);
+  }
+
+  if (digitos.length === 11 && digitos.indexOf('503') === 0) {
+    digitos = digitos.slice(-8);
+  }
+
+  return digitos;
+}
+
+function normalizarProcesoDuplicado_(proceso) {
+  return String(proceso || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+}
+
+function normalizarFechaDuplicado_(valor, zonaHoraria) {
+  if (Object.prototype.toString.call(valor) === '[object Date]' && !isNaN(valor.getTime())) {
+    return Utilities.formatDate(valor, zonaHoraria, 'yyyy-MM-dd');
+  }
+
+  const texto = String(valor || '').trim();
+
+  if (texto.toLowerCase() === 'cita abierta') {
+    return 'CITA ABIERTA';
+  }
+
+  let partes = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (partes) {
+    return partes[3] + '-' + partes[2].padStart(2, '0') + '-' + partes[1].padStart(2, '0');
+  }
+
+  partes = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (partes) {
+    return partes[1] + '-' + partes[2].padStart(2, '0') + '-' + partes[3].padStart(2, '0');
+  }
+
+  return '';
+}
+
+function buscarCitasDuplicadas_(hoja, datosCita) {
+  const zonaHoraria = Session.getScriptTimeZone();
+  const numero = normalizarNumeroDuplicado_(datosCita.numero);
+  const proceso = normalizarProcesoDuplicado_(datosCita.proceso);
+  const fecha = normalizarFechaDuplicado_(datosCita.fecha, zonaHoraria);
+
+  if (!numero || !proceso || !fecha || hoja.getLastRow() < 2) {
+    return [];
+  }
+
+  const rango = hoja.getDataRange();
+  const valores = rango.getValues();
+  const mostrados = rango.getDisplayValues();
+  const coincidencias = [];
+
+  for (let i = 1; i < valores.length; i++) {
+    const fila = valores[i];
+
+    if (
+      normalizarNumeroDuplicado_(fila[4]) === numero &&
+      normalizarProcesoDuplicado_(fila[3]) === proceso &&
+      normalizarFechaDuplicado_(fila[7], zonaHoraria) === fecha
+    ) {
+      const visible = mostrados[i];
+      coincidencias.push({
+        id: visible[0] || '',
+        cliente: visible[2] || '',
+        numero: visible[4] || '',
+        proceso: visible[3] || '',
+        fecha: visible[7] || '',
+        sucursalOrigen: visible[12] || '',
+        sucursalDestino: visible[8] || '',
+        asesor: visible[9] || '',
+        estado: visible[13] || ''
+      });
+    }
+  }
+
+  return coincidencias;
+}
+
 function guardarCita(datosCita) {
   const lock = LockService.getScriptLock();
 
@@ -294,6 +381,19 @@ function guardarCita(datosCita) {
     hojaDestino.getRange('N2:N').setDataValidation(reglaValidacion);
 
     lock.waitLock(30000);
+
+    if (datosCita.forzarDuplicado !== true) {
+      const coincidencias = buscarCitasDuplicadas_(hojaDestino, datosCita);
+
+      if (coincidencias.length > 0) {
+        return {
+          exito: false,
+          duplicado: true,
+          mensaje: 'Ya existe una posible cita duplicada',
+          coincidencias: coincidencias
+        };
+      }
+    }
 
     // Obtener último ID
     let ultimoID = 0;
