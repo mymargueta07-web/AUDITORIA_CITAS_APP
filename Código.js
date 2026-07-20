@@ -264,6 +264,8 @@ function obtenerAsesoresPorSucursal(sucursal) {
 }
 
 function guardarCita(datosCita) {
+  const lock = LockService.getScriptLock();
+
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let hojaDestino = ss.getSheetByName('RegistroCitas');
@@ -291,6 +293,8 @@ function guardarCita(datosCita) {
     // Aplicar validación a toda la columna N (desde fila 2 en adelante)
     hojaDestino.getRange('N2:N').setDataValidation(reglaValidacion);
 
+    lock.waitLock(30000);
+
     // Obtener último ID
     let ultimoID = 0;
     const ultimaFila = hojaDestino.getLastRow();
@@ -303,7 +307,7 @@ function guardarCita(datosCita) {
       }
     }
     const nuevoID = ultimoID + 1;
-    const idFormateado = nuevoID.toString().padStart(4, '0');
+    const idFormateado = String(nuevoID).padStart(4, "0");
 
     // Crear fila
     const fila = [
@@ -331,6 +335,10 @@ function guardarCita(datosCita) {
     return { exito: true, mensaje: 'Cita registrada correctamente', id: idFormateado };
   } catch (error) {
     return { exito: false, mensaje: error.toString() };
+  } finally {
+    if (lock.hasLock()) {
+      lock.releaseLock();
+    }
   }
 }
 

@@ -616,6 +616,7 @@ let sucursalesDisponibles = [];
  * hasta que el formulario sea limpiado.
  */
 let citaGuardadaPendienteLimpieza = false;
+let guardadoEnCurso = false;
 
   
   window.addEventListener('load', function() {
@@ -908,6 +909,10 @@ op.dataset.nombre.includes(texto)
 
   }
 
+  if (guardadoEnCurso) {
+    return;
+  }
+
 
   const sucursalOrigen =
     document.getElementById('sucursalOrigen').value;
@@ -1185,6 +1190,8 @@ fechaFinal = `${dia}/${mes}/${anio}`;
 
   const originalText = btn.innerText;
 
+  guardadoEnCurso = true;
+
   btn.disabled = true;
 
   btn.innerHTML =
@@ -1215,6 +1222,8 @@ fechaFinal = `${dia}/${mes}/${anio}`;
 
       } else {
 
+        guardadoEnCurso = false;
+
         mostrarMensaje(
           'Error: ' + respuesta.mensaje,
           'error'
@@ -1230,6 +1239,8 @@ fechaFinal = `${dia}/${mes}/${anio}`;
     })
 
     .withFailureHandler(function(error) {
+
+      guardadoEnCurso = false;
 
       mostrarMensaje(
         'Error de conexión: ' + error.message,
@@ -1321,6 +1332,7 @@ SUCURSAL ORIGEN: ${datos.sucursalOrigen}`;
   function limpiarFormulario() {
 // Permitir un nuevo registro
 citaGuardadaPendienteLimpieza = false;
+guardadoEnCurso = false;
 
     // Resetear formulario principal
     document.getElementById('citaForm').reset();
