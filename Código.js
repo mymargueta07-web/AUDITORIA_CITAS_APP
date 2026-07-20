@@ -369,7 +369,7 @@ function guardarCita(datosCita) {
       const encabezados = [
         'ID', 'Timestamp', 'Cliente', 'Proceso', 'Numero', 'Precio', 'Extras',
         'Fecha', 'SucursalDestino', 'Asesor', 'Nota', 'Origen', 'SucursalOrigen',
-        'ESTADO', 'FECHA DE VENTA'
+        'ESTADO', 'FECHA DE VENTA', 'HORA'
       ];
       hojaDestino.getRange(1, 1, 1, encabezados.length).setValues([encabezados]);
       hojaDestino.getRange('A:A').setNumberFormat('@');
@@ -381,6 +381,14 @@ function guardarCita(datosCita) {
     hojaDestino.getRange('N2:N').setDataValidation(reglaValidacion);
 
     lock.waitLock(30000);
+
+    const encabezadosActuales = hojaDestino
+      .getRange(1, 1, 1, Math.max(hojaDestino.getLastColumn(), 15))
+      .getValues()[0];
+
+    if (encabezadosActuales.indexOf('HORA') === -1) {
+      hojaDestino.getRange(1, 16).setValue('HORA');
+    }
 
     if (datosCita.forzarDuplicado !== true) {
       const coincidencias = buscarCitasDuplicadas_(hojaDestino, datosCita);
@@ -425,7 +433,8 @@ function guardarCita(datosCita) {
       datosCita.origen,
       datosCita.sucursalOrigen,
       'EN ESPERA DE CITA',
-      ''
+      '',
+      datosCita.hora || ''
     ];
 
     hojaDestino.appendRow(fila);

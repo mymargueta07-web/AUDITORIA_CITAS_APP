@@ -618,6 +618,10 @@
               <label for="citaAbierta" style="margin:0">Cita abierta (sin fecha definida)</label>
             </div>
           </div>
+          <div class="form-group">
+            <label>Hora de la cita</label>
+            <input type="time" id="horaCita">
+          </div>
           <div class="form-group full-width">
 
             <label>Sucursal(es) donde asistirá el cliente <span class="required">*</span></label>
@@ -964,11 +968,15 @@ op.dataset.nombre.includes(texto)
   function toggleFechaCita() {
     const chk = document.getElementById('citaAbierta');
     const dateInput = document.getElementById('fechaCita');
+    const timeInput = document.getElementById('horaCita');
     if (chk.checked) {
       dateInput.disabled = true;
       dateInput.value = '';
+      timeInput.disabled = true;
+      timeInput.value = '';
     } else {
       dateInput.disabled = false;
+      timeInput.disabled = false;
     }
   }
   
@@ -1034,6 +1042,15 @@ op.dataset.nombre.includes(texto)
 
   const fechaInput =
     document.getElementById('fechaCita').value;
+
+  const horaInput =
+    document.getElementById('horaCita').value;
+
+  const horaParaGuardar =
+    horaInput || '';
+
+  const horaParaResumen =
+    horaInput || 'No especificada';
 
 
   // =====================================================
@@ -1148,9 +1165,6 @@ op.dataset.nombre.includes(texto)
 
   let fechaFinal = '';
 
-  let hora = 'No especificada';
-
-
   if (citaAbierta) {
 
     fechaFinal = 'cita abierta';
@@ -1254,6 +1268,8 @@ fechaFinal = `${dia}/${mes}/${anio}`;
 
     fecha: fechaFinal,
 
+    hora: horaParaGuardar,
+
     sucursalDestino:
       sucursalesElegidas.join(', '),
 
@@ -1281,7 +1297,7 @@ fechaFinal = `${dia}/${mes}/${anio}`;
   btn.innerHTML =
     'Guardando... <span class="loading"></span>';
 
-  ejecutarGuardado(datos, btn, originalText, hora);
+  ejecutarGuardado(datos, btn, originalText, horaParaResumen);
 
 }
 
@@ -1589,6 +1605,8 @@ guardadoEnCurso = false;
     // Reiniciar fecha
     document.getElementById('citaAbierta').checked = false;
     document.getElementById('fechaCita').disabled = false;
+    document.getElementById('horaCita').value = '';
+    document.getElementById('horaCita').disabled = false;
 
     // Ocultar resumen anterior
     const mensaje = document.getElementById('mensaje');

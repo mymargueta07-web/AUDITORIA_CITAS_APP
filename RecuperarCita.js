@@ -84,6 +84,10 @@ function buscarCitasPorNumero(numeroBuscado) {
         fechaVenta:
           indices.FECHA_DE_VENTA !== -1
             ? fila[indices.FECHA_DE_VENTA] || ''
+            : '',
+        hora:
+          indices.HORA !== -1
+            ? fila[indices.HORA] || ''
             : ''
       };
 
@@ -140,7 +144,8 @@ function obtenerIndicesRecuperarCita_(encabezados) {
       encabezados.indexOf('SucursalOrigen'),
     ESTADO: encabezados.indexOf('ESTADO'),
     FECHA_DE_VENTA:
-      encabezados.indexOf('FECHA DE VENTA')
+      encabezados.indexOf('FECHA DE VENTA'),
+    HORA: encabezados.indexOf('HORA')
   };
 
 }
@@ -238,7 +243,7 @@ PROCESO: ${cita.proceso || ''}
 PRECIO: ${cita.precio || ''}
 EXTRAS: ${cita.extras || 'Ninguno'}
 FECHA: ${cita.fecha || ''}
-HORA: No especificada
+HORA: ${cita.hora || 'No especificada'}
 SUCURSAL: ${cita.sucursalDestino || ''}
 ASESOR: ${cita.asesor || ''}
 NOTA: ${cita.nota || 'Ninguna'}
