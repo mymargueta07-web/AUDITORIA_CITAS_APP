@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= include('ReporteMensualSucursalCSS'); ?>
+</head>
+<body>
+
+  <div class="rms-wrapper">
+
+    <!-- ENCABEZADO -->
+    <div class="rms-card rms-header">
+      <div class="rms-title-wrap">
+        <h1 class="rms-title">📊 Reporte Mensual por Asesor</h1>
+        <p class="rms-subtitle">
+          Consulta el total de citas registradas por sucursal en un mes específico
+          y el desglose por asesor.
+        </p>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="rms-filtros">
+        <div class="rms-filtro">
+          <label for="rmsSucursal">Sucursal</label>
+          <select id="rmsSucursal">
+            <option value="">Cargando sucursales...</option>
+          </select>
+        </div>
+
+        <div class="rms-filtro">
+          <label for="rmsMes">Mes</label>
+          <select id="rmsMes">
+            <option value="1">Enero</option>
+            <option value="2">Febrero</option>
+            <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7">Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
+          </select>
+        </div>
+
+        <div class="rms-filtro">
+          <label for="rmsAnio">Año</label>
+          <select id="rmsAnio"></select>
+        </div>
+      </div>
+
+      <!-- BOTONES -->
+      <div class="rms-acciones">
+        <button id="btnMesActual" class="btn btn-secundario" type="button">
+          Mes actual
+        </button>
+
+        <button id="btnGenerarReporteMensual" class="btn btn-primario" type="button">
+          Generar Reporte
+        </button>
+      </div>
+
+      <!-- ESTADO -->
+      <div id="rmsEstado" class="rms-estado oculto"></div>
+    </div>
+
+    <!-- CONTENIDO -->
+    <div id="rmsContenido"></div>
+
+  </div>
+
+  <?!= include('ReporteMensualSucursalJS'); ?>
+</body>
+</html>

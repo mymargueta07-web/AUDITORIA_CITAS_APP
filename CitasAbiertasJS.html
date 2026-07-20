@@ -1,0 +1,422 @@
+<script>
+
+  let CA_STATE = {
+    sucursales: [],
+    reporte: null,
+    filtros: {
+      sucursal: "",
+      desde: "",
+      hasta: ""
+    }
+  };
+
+  document.addEventListener("DOMContentLoaded", initCitasAbiertas);
+
+  function initCitasAbiertas() {
+    setRangoInicial();
+    bindEventos();
+    cargarSucursales();
+  }
+
+  /* ==========================================================
+     INICIALIZACIÓN
+     ========================================================== */
+  function bindEventos() {
+    document.getElementById("btnGenerar").addEventListener("click", generarReporte);
+    document.getElementById("btnExportar").addEventListener("click", exportarExcel);
+  }
+
+  function setRangoInicial() {
+    const hoy = new Date();
+
+    const hasta = formatearInputDate(hoy);
+
+    const desdeDate = new Date(hoy);
+    desdeDate.setDate(desdeDate.getDate() - 7);
+    const desde = formatearInputDate(desdeDate);
+
+    document.getElementById("fechaDesde").value = desde;
+    document.getElementById("fechaHasta").value = hasta;
+  }
+
+  function formatearInputDate(fecha) {
+    const y = fecha.getFullYear();
+    const m = String(fecha.getMonth() + 1).padStart(2, "0");
+    const d = String(fecha.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  /* ==========================================================
+     CARGA DE SUCURSALES
+     ========================================================== */
+  function cargarSucursales() {
+    setEstado("loading", "Cargando sucursales...");
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.ok) {
+          setEstado("error", (res && res.mensaje) || "No se pudieron cargar las sucursales.");
+          return;
+        }
+
+        CA_STATE.sucursales = res.sucursales || [];
+        pintarSelectSucursales(CA_STATE.sucursales);
+        setEstado("ok", "Sucursales cargadas correctamente.");
+      })
+      .withFailureHandler(function(err) {
+        setEstado("error", obtenerMensajeError(err));
+      })
+      .obtenerConfigCitasAbiertas();
+  }
+
+  function pintarSelectSucursales(sucursales) {
+    const select = document.getElementById("sucursal");
+
+    let html = `<option value="">Selecciona una sucursal</option>`;
+
+    sucursales.forEach(function(nombre) {
+      html += `<option value="${escapeHtml(nombre)}">${escapeHtml(nombre)}</option>`;
+    });
+
+    select.innerHTML = html;
+  }
+
+  /* ==========================================================
+     GENERAR REPORTE
+     ========================================================== */
+  function generarReporte() {
+    const filtros = leerFiltros();
+
+    const validacion = validarFiltros(filtros);
+    if (!validacion.ok) {
+      setEstado("error", validacion.mensaje);
+      return;
+    }
+
+    CA_STATE.filtros = filtros;
+    bloquearUI(true);
+    setEstado("loading", "Generando reporte de citas abiertas...");
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        bloquearUI(false);
+
+        if (!res || !res.ok) {
+          setEstado("error", (res && res.mensaje) || "No se pudo generar el reporte.");
+          document.getElementById("btnExportar").disabled = true;
+          return;
+        }
+
+        CA_STATE.reporte = res;
+        renderReporte(res);
+
+        const totalRegistros = (res.resumen && res.resumen.totalRegistros) || 0;
+        document.getElementById("btnExportar").disabled = totalRegistros <= 0;
+
+        if (totalRegistros > 0) {
+          setEstado("ok", `Reporte generado: ${totalRegistros} registro(s) encontrado(s).`);
+        } else {
+          setEstado("ok", "No se encontraron registros para los filtros seleccionados.");
+        }
+      })
+      .withFailureHandler(function(err) {
+        bloquearUI(false);
+        document.getElementById("btnExportar").disabled = true;
+        setEstado("error", obtenerMensajeError(err));
+      })
+      .obtenerReporteCitasAbiertas(
+        filtros.sucursal,
+        filtros.desde,
+        filtros.hasta
+      );
+  }
+
+  function leerFiltros() {
+    return {
+      sucursal: (document.getElementById("sucursal").value || "").trim(),
+      desde: (document.getElementById("fechaDesde").value || "").trim(),
+      hasta: (document.getElementById("fechaHasta").value || "").trim()
+    };
+  }
+
+  function validarFiltros(filtros) {
+    if (!filtros.sucursal) {
+      return {
+        ok: false,
+        mensaje: "Debes seleccionar una sucursal."
+      };
+    }
+
+    if (!filtros.desde || !filtros.hasta) {
+      return {
+        ok: false,
+        mensaje: "Debes seleccionar el rango de fechas."
+      };
+    }
+
+    if (filtros.desde > filtros.hasta) {
+      return {
+        ok: false,
+        mensaje: "La fecha inicial no puede ser mayor que la fecha final."
+      };
+    }
+
+    return { ok: true };
+  }
+
+  /* ==========================================================
+     RENDER DEL REPORTE
+     ========================================================== */
+  function renderReporte(res) {
+    const cont = document.getElementById("contenido");
+
+    if (!res || !res.ok) {
+      cont.innerHTML = "";
+      return;
+    }
+
+    const totalRegistros = (res.resumen && res.resumen.totalRegistros) || 0;
+
+    if (totalRegistros <= 0) {
+      cont.innerHTML = renderVacio(res);
+      return;
+    }
+
+    const html = `
+      ${renderResumen(res)}
+      ${renderTablaAsesores(res)}
+    `;
+
+    cont.innerHTML = html;
+  }
+
+  function renderResumen(res) {
+    const filtros = res.filtros || {};
+    const resumen = res.resumen || {};
+
+    const rango = `${formatFechaVisual(filtros.desde)} al ${formatFechaVisual(filtros.hasta)}`;
+
+    return `
+      <div class="ca-resumen">
+        <h3>📊 Resumen del reporte</h3>
+
+        <div class="ca-meta">
+          <div class="ca-meta-card">
+            <span class="label">Sucursal</span>
+            <span class="value">${escapeHtml(filtros.sucursal || "")}</span>
+          </div>
+
+          <div class="ca-meta-card">
+            <span class="label">Rango consultado</span>
+            <span class="value">${escapeHtml(rango)}</span>
+          </div>
+
+          <div class="ca-meta-card">
+            <span class="label">Asesores con registros</span>
+            <span class="value">${resumen.totalAsesores || 0}</span>
+          </div>
+        </div>
+
+        <div class="ca-kpis">
+          <div class="ca-kpi">
+            <div class="num">${resumen.totalRegistros || 0}</div>
+            <div class="txt">Total de citas abiertas encontradas</div>
+          </div>
+
+          <div class="ca-kpi">
+            <div class="num">${resumen.totalAsesores || 0}</div>
+            <div class="txt">Asesores incluidos en el reporte</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderTablaAsesores(res) {
+    const asesores = res.asesores || [];
+
+    let filas = "";
+
+    asesores.forEach(function(asesor) {
+      filas += `
+        <tr>
+          <td>${escapeHtml(asesor.asesor || "SIN ASESOR")}</td>
+          <td class="col-num">${asesor.cantidad || 0}</td>
+        </tr>
+      `;
+    });
+
+    return `
+      <div class="ca-tabla-wrap">
+        <h3>👥 Registros por asesor</h3>
+
+        <div class="tabla-responsive">
+          <table class="ca-tabla">
+            <thead>
+              <tr>
+                <th>Asesor</th>
+                <th class="col-num">Registros</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filas}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderVacio(res) {
+    const filtros = res.filtros || {};
+    const rango = `${formatFechaVisual(filtros.desde)} al ${formatFechaVisual(filtros.hasta)}`;
+
+    return `
+      <div class="ca-resumen">
+        <h3>📊 Resumen del reporte</h3>
+
+        <div class="ca-meta">
+          <div class="ca-meta-card">
+            <span class="label">Sucursal</span>
+            <span class="value">${escapeHtml(filtros.sucursal || "")}</span>
+          </div>
+
+          <div class="ca-meta-card">
+            <span class="label">Rango consultado</span>
+            <span class="value">${escapeHtml(rango)}</span>
+          </div>
+
+          <div class="ca-meta-card">
+            <span class="label">Asesores con registros</span>
+            <span class="value">0</span>
+          </div>
+        </div>
+
+        <div class="ca-kpis">
+          <div class="ca-kpi">
+            <div class="num">0</div>
+            <div class="txt">Total de citas abiertas encontradas</div>
+          </div>
+
+          <div class="ca-kpi">
+            <div class="num">0</div>
+            <div class="txt">Asesores incluidos en el reporte</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ca-vacio">
+        <div class="icono">📭</div>
+        <h3>Sin resultados</h3>
+        <p>
+          No se encontraron citas abiertas para la sucursal y rango seleccionados.
+        </p>
+      </div>
+    `;
+  }
+
+  /* ==========================================================
+     EXPORTAR EXCEL
+     ========================================================== */
+  function exportarExcel() {
+    const totalRegistros = CA_STATE.reporte?.resumen?.totalRegistros || 0;
+
+    if (!CA_STATE.reporte || totalRegistros <= 0) {
+      setEstado("error", "Primero debes generar un reporte con resultados.");
+      return;
+    }
+
+    const filtros = CA_STATE.filtros;
+
+    bloquearUI(true);
+    setEstado("loading", "Generando archivo Excel...");
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        bloquearUI(false);
+
+        if (!res || !res.ok) {
+          setEstado("error", (res && res.mensaje) || "No se pudo generar el archivo Excel.");
+          return;
+        }
+
+        setEstado("ok", "Archivo Excel generado correctamente.");
+        mostrarDescarga(res);
+      })
+      .withFailureHandler(function(err) {
+        bloquearUI(false);
+        setEstado("error", obtenerMensajeError(err));
+      })
+      .exportarReporteCitasAbiertas(
+        filtros.sucursal,
+        filtros.desde,
+        filtros.hasta
+      );
+  }
+
+  function mostrarDescarga(res) {
+    const cont = document.getElementById("contenido");
+
+    const bloque = document.createElement("div");
+    bloque.className = "ca-descarga";
+    bloque.id = "bloqueDescargaExcel";
+
+    bloque.innerHTML = `
+      <h4>📥 Archivo listo para descargar</h4>
+      <p>
+        El reporte en Excel fue generado correctamente. Haz clic en el botón para descargarlo.
+      </p>
+      <a href="${res.url}" target="_blank">
+        Descargar Excel
+      </a>
+    `;
+
+    const anterior = document.getElementById("bloqueDescargaExcel");
+    if (anterior) anterior.remove();
+
+    cont.prepend(bloque);
+  }
+
+  /* ==========================================================
+     UTILIDADES UI
+     ========================================================== */
+  function bloquearUI(valor) {
+    document.getElementById("btnGenerar").disabled = valor;
+    document.getElementById("btnExportar").disabled = valor || !(CA_STATE.reporte?.resumen?.totalRegistros > 0);
+    document.getElementById("sucursal").disabled = valor;
+    document.getElementById("fechaDesde").disabled = valor;
+    document.getElementById("fechaHasta").disabled = valor;
+  }
+
+  function setEstado(tipo, mensaje) {
+    const el = document.getElementById("estado");
+
+    el.classList.remove("oculto", "loading", "ok", "error");
+    el.classList.add(tipo);
+    el.textContent = mensaje || "";
+  }
+
+  function obtenerMensajeError(err) {
+    if (!err) return "Ocurrió un error inesperado.";
+    return err.message || err.toString() || "Ocurrió un error inesperado.";
+  }
+
+  function formatFechaVisual(fechaYmd) {
+    if (!fechaYmd) return "";
+
+    const partes = fechaYmd.split("-");
+    if (partes.length !== 3) return fechaYmd;
+
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  }
+
+  function escapeHtml(valor) {
+    return String(valor == null ? "" : valor)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+</script>

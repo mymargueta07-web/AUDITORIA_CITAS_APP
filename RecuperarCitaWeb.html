@@ -1,0 +1,616 @@
+<style>
+
+  /* =====================================================
+     RECUPERAR CITA - COMPONENTE WEB
+  ===================================================== */
+
+  .rc-contenedor {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .rc-panel {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px 32px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .1);
+    margin-bottom: 20px;
+  }
+
+  .rc-titulo {
+    color: #1e466e;
+    border-left: 5px solid #2a7faa;
+    padding-left: 18px;
+    margin-top: 0;
+    margin-bottom: 8px;
+  }
+
+  .rc-descripcion {
+    margin: 0 0 20px;
+    color: #6c757d;
+    font-size: 14px;
+  }
+
+  .rc-busqueda {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .rc-busqueda input {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 13px;
+    border: 1px solid #ccd7e6;
+    border-radius: 10px;
+    font-size: 15px;
+    box-sizing: border-box;
+  }
+
+  .rc-busqueda input:focus {
+    border-color: #2a7faa;
+    outline: none;
+    box-shadow:
+      0 0 0 3px rgba(42, 127, 170, .12);
+  }
+
+  .rc-btn-buscar {
+    background-color: #2a7faa;
+    color: white;
+    border: none;
+    padding: 11px 24px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+    width: auto;
+    margin: 0;
+  }
+
+  .rc-btn-buscar:hover {
+    background-color: #1e5f7e;
+  }
+
+  .rc-btn-buscar:disabled {
+    opacity: .65;
+    cursor: wait;
+  }
+
+  .rc-estado {
+    display: none;
+    max-width: 1000px;
+    margin: 0 auto 18px;
+    padding: 13px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .rc-estado.cargando {
+    display: block;
+    background: #e8f0fe;
+    color: #1a5aa5;
+  }
+
+  .rc-estado.error {
+    display: block;
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+
+  .rc-estado.correcto {
+    display: block;
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+
+  .rc-resultados {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .rc-sin-resultados {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 35px 20px;
+    text-align: center;
+    color: #6c757d;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .07);
+  }
+
+  .rc-resultado {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 15px;
+    padding: 14px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .07);
+  }
+
+  .rc-resultado-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .rc-resultado-titulo {
+    font-weight: 700;
+    color: #1e466e;
+  }
+
+  .rc-resumen {
+    margin: 0;
+    background: #f8f9fa;
+    border-left: 4px solid #2a7faa;
+    border-radius: 9px;
+    padding: 14px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 14px;
+    line-height: 1.45;
+    color: #063b22;
+  }
+
+  .rc-acciones {
+    margin-top: 12px;
+  }
+
+  .rc-btn-copiar {
+    background-color: #28a745;
+    color: #ffffff;
+    border: none;
+    border-radius: 30px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    width: auto;
+    margin: 0;
+  }
+
+  .rc-btn-copiar:hover {
+    background-color: #218838;
+  }
+
+  @media(max-width: 650px) {
+
+    .rc-panel {
+      padding: 20px;
+    }
+
+    .rc-busqueda {
+      flex-direction: column;
+    }
+
+    .rc-btn-buscar,
+    .rc-btn-copiar {
+      width: 100%;
+    }
+
+    .rc-resultado-cabecera {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+  }
+
+</style>
+
+
+<div class="rc-contenedor">
+
+  <div class="rc-panel">
+
+    <h1 class="rc-titulo">
+      Recuperar cita
+    </h1>
+
+    <p class="rc-descripcion">
+      Ingrese el número de contacto utilizado al registrar
+      la cita. Se mostrarán todas las coincidencias encontradas.
+    </p>
+
+    <div class="rc-busqueda">
+
+      <input
+        type="tel"
+        id="rcNumero"
+        placeholder="Ejemplo: 70000000 o +503 7000 0000"
+        autocomplete="off"
+        inputmode="tel">
+
+      <button
+        type="button"
+        id="rcBtnBuscar"
+        class="rc-btn-buscar">
+        Buscar cita
+      </button>
+
+    </div>
+
+  </div>
+
+  <div
+    id="rcEstado"
+    class="rc-estado">
+  </div>
+
+  <div
+    id="rcResultados"
+    class="rc-resultados">
+  </div>
+
+</div>
+
+
+<script>
+
+  /**
+   * Inicialización del módulo Recuperar cita.
+   */
+  function rcInicializar() {
+
+    const input =
+      document.getElementById('rcNumero');
+
+    const boton =
+      document.getElementById('rcBtnBuscar');
+
+    if (!input || !boton) {
+      return;
+    }
+
+    /*
+     * Evita registrar varias veces los eventos
+     * al cambiar entre secciones.
+     */
+    if (boton.dataset.inicializado === 'si') {
+      return;
+    }
+
+    boton.dataset.inicializado = 'si';
+
+    boton.addEventListener(
+      'click',
+      rcBuscarCitas
+    );
+
+    input.addEventListener(
+      'keydown',
+      function(event) {
+
+        if (event.key === 'Enter') {
+
+          event.preventDefault();
+          rcBuscarCitas();
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /**
+   * Ejecuta la búsqueda en Apps Script.
+   */
+  function rcBuscarCitas() {
+
+    const input =
+      document.getElementById('rcNumero');
+
+    const boton =
+      document.getElementById('rcBtnBuscar');
+
+    const resultados =
+      document.getElementById('rcResultados');
+
+    const numero = input.value.trim();
+
+    if (!numero) {
+
+      rcMostrarEstado(
+        'error',
+        'Ingrese el número de contacto que desea buscar.'
+      );
+
+      input.focus();
+      return;
+
+    }
+
+    boton.disabled = true;
+    boton.textContent = 'Buscando...';
+
+    resultados.innerHTML = '';
+
+    rcMostrarEstado(
+      'cargando',
+      'Buscando citas registradas...'
+    );
+
+    google.script.run
+
+      .withSuccessHandler(function(respuesta) {
+
+        boton.disabled = false;
+        boton.textContent = 'Buscar cita';
+
+        if (!respuesta || !respuesta.ok) {
+
+          rcMostrarEstado(
+            'error',
+            respuesta && respuesta.mensaje
+              ? respuesta.mensaje
+              : 'No fue posible realizar la búsqueda.'
+          );
+
+          return;
+
+        }
+
+        rcRenderizarResultados(respuesta);
+
+      })
+
+      .withFailureHandler(function(error) {
+
+        boton.disabled = false;
+        boton.textContent = 'Buscar cita';
+
+        rcMostrarEstado(
+          'error',
+          error.message || error.toString()
+        );
+
+      })
+
+      .buscarCitasPorNumero(numero);
+
+  }
+
+
+  /**
+   * Muestra todas las coincidencias.
+   */
+  function rcRenderizarResultados(respuesta) {
+
+    const contenedor =
+      document.getElementById('rcResultados');
+
+    const resultados =
+      respuesta.resultados || [];
+
+    contenedor.innerHTML = '';
+
+    if (!resultados.length) {
+
+      rcOcultarEstado();
+
+      contenedor.innerHTML = `
+        <div class="rc-sin-resultados">
+          No se encontraron citas registradas
+          con ese número.
+        </div>
+      `;
+
+      return;
+
+    }
+
+    rcMostrarEstado(
+      'correcto',
+      resultados.length === 1
+        ? 'Se encontró 1 cita.'
+        : `Se encontraron ${resultados.length} citas.`
+    );
+
+    resultados.forEach(
+      function(cita, indice) {
+
+        const bloque =
+          document.createElement('div');
+
+        bloque.className =
+          'rc-resultado';
+
+        const cabecera =
+          document.createElement('div');
+
+        cabecera.className =
+          'rc-resultado-cabecera';
+
+        const titulo =
+          document.createElement('div');
+
+        titulo.className =
+          'rc-resultado-titulo';
+
+        titulo.textContent =
+          resultados.length > 1
+            ? `Resultado ${indice + 1} de ${resultados.length}`
+            : 'Cita encontrada';
+
+        cabecera.appendChild(titulo);
+
+        const resumen =
+          document.createElement('pre');
+
+        resumen.className = 'rc-resumen';
+        resumen.textContent = cita.resumen;
+
+        const acciones =
+          document.createElement('div');
+
+        acciones.className = 'rc-acciones';
+
+        const botonCopiar =
+          document.createElement('button');
+
+        botonCopiar.type = 'button';
+        botonCopiar.className =
+          'rc-btn-copiar';
+
+        botonCopiar.textContent =
+          '📋 Copiar texto';
+
+        botonCopiar.addEventListener(
+          'click',
+          function() {
+
+            rcCopiarResumen(
+              cita.resumen,
+              botonCopiar
+            );
+
+          }
+        );
+
+        acciones.appendChild(botonCopiar);
+
+        bloque.appendChild(cabecera);
+        bloque.appendChild(resumen);
+        bloque.appendChild(acciones);
+
+        contenedor.appendChild(bloque);
+
+      }
+    );
+
+  }
+
+
+  /**
+   * Copia un resumen al portapapeles.
+   */
+  function rcCopiarResumen(texto, boton) {
+
+    if (
+      navigator.clipboard &&
+      navigator.clipboard.writeText
+    ) {
+
+      navigator.clipboard
+        .writeText(texto)
+
+        .then(function() {
+          rcConfirmarCopiado(boton);
+        })
+
+        .catch(function() {
+
+          rcCopiarTextoAlternativo(texto);
+          rcConfirmarCopiado(boton);
+
+        });
+
+      return;
+
+    }
+
+    rcCopiarTextoAlternativo(texto);
+    rcConfirmarCopiado(boton);
+
+  }
+
+
+  function rcConfirmarCopiado(boton) {
+
+    const textoAnterior =
+      boton.textContent;
+
+    boton.textContent = '✅ Copiado';
+
+    setTimeout(function() {
+
+      boton.textContent =
+        textoAnterior;
+
+    }, 1800);
+
+  }
+
+
+  /**
+   * Método alternativo para copiar.
+   */
+  function rcCopiarTextoAlternativo(texto) {
+
+    const area =
+      document.createElement('textarea');
+
+    area.value = texto;
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+
+    document.body.appendChild(area);
+
+    area.select();
+
+    document.execCommand('copy');
+
+    document.body.removeChild(area);
+
+  }
+
+
+  function rcMostrarEstado(tipo, mensaje) {
+
+    const estado =
+      document.getElementById('rcEstado');
+
+    estado.className =
+      'rc-estado ' + tipo;
+
+    estado.textContent = mensaje;
+
+  }
+
+
+  function rcOcultarEstado() {
+
+    const estado =
+      document.getElementById('rcEstado');
+
+    estado.className = 'rc-estado';
+    estado.textContent = '';
+
+  }
+
+
+  /**
+   * Limpia el módulo de recuperación.
+   * Esta función se usará desde el menú principal.
+   */
+  function rcLimpiarModulo() {
+
+    const input =
+      document.getElementById('rcNumero');
+
+    const estado =
+      document.getElementById('rcEstado');
+
+    const resultados =
+      document.getElementById('rcResultados');
+
+    if (input) {
+      input.value = '';
+    }
+
+    if (estado) {
+      estado.className = 'rc-estado';
+      estado.textContent = '';
+    }
+
+    if (resultados) {
+      resultados.innerHTML = '';
+    }
+
+  }
+
+</script>

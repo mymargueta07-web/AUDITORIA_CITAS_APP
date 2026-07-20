@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+
+  <?!= include('CSS'); ?>
+
+</head>
+
+<body>
+
+<div class="app">
+
+  <!-- =========================
+       HEADER / FILTROS
+  ========================== -->
+  <div class="panel panel-header">
+
+    <h2>📅 Sistema de Citas</h2>
+
+    <div class="toolbar">
+
+      <input type="date" id="fecha">
+
+      <button id="btnBuscar">Buscar</button>
+      <button id="btnHoy">Hoy</button>
+
+    </div>
+
+  </div>
+
+  <!-- =========================
+       ESTADO (LOADING / MENSAJES)
+  ========================== -->
+  <div id="estado" class="estado oculto"></div>
+
+  <!-- =========================
+       RESUMEN (CARDS)
+  ========================== -->
+  <div id="resumen" class="resumen"></div>
+
+  <!-- =========================
+       CONTENIDO PRINCIPAL
+  ========================== -->
+  <div id="contenido"></div>
+
+  <div id="estado" class="estado oculto"></div>
+
+  <div id="resumenGeneral"></div>
+
+  <div id="contenido"></div>
+
+</div>
+
+<?!= include('JavaScript'); ?>
+
+</body>
+
+</html>

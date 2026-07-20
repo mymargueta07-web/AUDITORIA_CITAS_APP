@@ -1,0 +1,366 @@
+<script>
+  let RMS_STATE = {
+    sucursales: [],
+    reporte: null
+  };
+
+  document.addEventListener("DOMContentLoaded", initReporteMensualSucursal);
+
+  function initReporteMensualSucursal() {
+    inicializarAnios();
+    setMesActual();
+    bindEventosReporteMensual();
+    cargarSucursalesReporteMensual();
+  }
+
+  /* ==========================================================
+     INICIALIZACIÓN
+     ========================================================== */
+  function bindEventosReporteMensual() {
+    document
+      .getElementById("btnMesActual")
+      .addEventListener("click", setMesActual);
+
+    document
+      .getElementById("btnGenerarReporteMensual")
+      .addEventListener("click", generarReporteMensualSucursal);
+  }
+
+  function inicializarAnios() {
+    const select = document.getElementById("rmsAnio");
+    const actual = new Date().getFullYear();
+
+    let html = "";
+    for (let anio = actual + 1; anio >= actual - 5; anio--) {
+      html += `<option value="${anio}">${anio}</option>`;
+    }
+
+    select.innerHTML = html;
+    select.value = String(actual);
+  }
+
+  function setMesActual() {
+    const hoy = new Date();
+    document.getElementById("rmsMes").value = String(hoy.getMonth() + 1);
+    document.getElementById("rmsAnio").value = String(hoy.getFullYear());
+  }
+
+  /* ==========================================================
+     CARGA DE SUCURSALES
+     ========================================================== */
+  function cargarSucursalesReporteMensual() {
+    setEstadoRMS("loading", "Cargando sucursales...");
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.ok) {
+          setEstadoRMS("error", (res && res.mensaje) || "No se pudieron cargar las sucursales.");
+          return;
+        }
+
+        RMS_STATE.sucursales = res.sucursales || [];
+        pintarSelectSucursalesRMS(RMS_STATE.sucursales);
+        setEstadoRMS("ok", "Sucursales cargadas correctamente.");
+      })
+      .withFailureHandler(function(err) {
+        setEstadoRMS("error", obtenerMensajeErrorRMS(err));
+      })
+      .obtenerConfigReporteMensualSucursal();
+  }
+
+  function pintarSelectSucursalesRMS(sucursales) {
+    const select = document.getElementById("rmsSucursal");
+
+    let html = `<option value="">Selecciona una sucursal</option>`;
+
+    sucursales.forEach(function(nombre) {
+      html += `<option value="${escapeHtmlRMS(nombre)}">${escapeHtmlRMS(nombre)}</option>`;
+    });
+
+    select.innerHTML = html;
+  }
+
+  /* ==========================================================
+     GENERAR REPORTE
+     ========================================================== */
+  function generarReporteMensualSucursal() {
+    const filtros = leerFiltrosRMS();
+    const validacion = validarFiltrosRMS(filtros);
+
+    if (!validacion.ok) {
+      setEstadoRMS("error", validacion.mensaje);
+      return;
+    }
+
+    bloquearUIRMS(true);
+    setEstadoRMS("loading", "Generando reporte mensual...");
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        bloquearUIRMS(false);
+
+        if (!res || !res.ok) {
+          setEstadoRMS("error", (res && res.mensaje) || "No se pudo generar el reporte.");
+          return;
+        }
+
+        RMS_STATE.reporte = res;
+        renderReporteMensual(res);
+
+        const totalCitas = (res.resumen && res.resumen.totalCitas) || 0;
+
+        if (totalCitas > 0) {
+          setEstadoRMS("ok", `Reporte generado correctamente. Total de citas: ${totalCitas}.`);
+        } else {
+          setEstadoRMS("ok", "No se encontraron citas para los filtros seleccionados.");
+        }
+      })
+      .withFailureHandler(function(err) {
+        bloquearUIRMS(false);
+        setEstadoRMS("error", obtenerMensajeErrorRMS(err));
+      })
+      .obtenerReporteMensualSucursal(
+        filtros.sucursal,
+        filtros.mes,
+        filtros.anio
+      );
+  }
+
+  function leerFiltrosRMS() {
+    return {
+      sucursal: (document.getElementById("rmsSucursal").value || "").trim(),
+      mes: Number(document.getElementById("rmsMes").value || 0),
+      anio: Number(document.getElementById("rmsAnio").value || 0)
+    };
+  }
+
+  function validarFiltrosRMS(filtros) {
+    if (!filtros.sucursal) {
+      return {
+        ok: false,
+        mensaje: "Debes seleccionar una sucursal."
+      };
+    }
+
+    if (!filtros.mes || filtros.mes < 1 || filtros.mes > 12) {
+      return {
+        ok: false,
+        mensaje: "Debes seleccionar un mes válido."
+      };
+    }
+
+    if (!filtros.anio || filtros.anio < 2000) {
+      return {
+        ok: false,
+        mensaje: "Debes seleccionar un año válido."
+      };
+    }
+
+    return { ok: true };
+  }
+
+  /* ==========================================================
+     RENDER DEL REPORTE
+     ========================================================== */
+  function renderReporteMensual(res) {
+    const cont = document.getElementById("rmsContenido");
+
+    if (!res || !res.ok) {
+      cont.innerHTML = "";
+      return;
+    }
+
+    const totalCitas = (res.resumen && res.resumen.totalCitas) || 0;
+
+    if (totalCitas <= 0) {
+      cont.innerHTML = renderVacioRMS(res);
+      return;
+    }
+
+    cont.innerHTML = `
+      ${renderEncabezadoReporteRMS(res)}
+      ${renderKPIsRMS(res)}
+      ${renderTablaAsesoresRMS(res)}
+    `;
+  }
+
+  function renderEncabezadoReporteRMS(res) {
+    const filtros = res.filtros || {};
+    const nombreMes = filtros.nombreMes || nombreMesRMS(filtros.mes);
+
+    return `
+      <div class="rms-card rms-reporte-header">
+        <h2 class="rms-reporte-titulo">Reporte Mensual por Asesor</h2>
+        <p class="rms-reporte-mes">${escapeHtmlRMS(nombreMes)} ${escapeHtmlRMS(String(filtros.anio || ""))}</p>
+        <div class="rms-chip-sucursal">
+          <span>🏢</span>
+          <strong>${escapeHtmlRMS(filtros.sucursal || "")}</strong>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderKPIsRMS(res) {
+    const resumen = res.resumen || {};
+
+    return `
+      <div class="rms-card rms-kpis-card">
+        <div class="rms-kpis">
+          <div class="rms-kpi">
+            <div class="rms-kpi-num">${resumen.totalCitas || 0}</div>
+            <div class="rms-kpi-label">Total de Citas Registradas</div>
+          </div>
+
+          <div class="rms-kpi">
+            <div class="rms-kpi-num">${resumen.totalAsesores || 0}</div>
+            <div class="rms-kpi-label">Asesores Activos</div>
+          </div>
+
+          <div class="rms-kpi">
+            <div class="rms-kpi-num">${formatearNumeroRMS(resumen.promedioPorAsesor || 0)}</div>
+            <div class="rms-kpi-label">Promedio de Citas por Asesor</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderTablaAsesoresRMS(res) {
+    const asesores = res.asesores || [];
+
+    let filas = "";
+
+    asesores.forEach(function(item, index) {
+      const porcentaje = Number(item.porcentaje || 0);
+      const width = Math.max(0, Math.min(100, porcentaje));
+
+      filas += `
+        <tr>
+          <td>${index + 1}</td>
+          <td class="asesor">${escapeHtmlRMS(item.asesor || "SIN ASESOR")}</td>
+          <td class="col-num">${item.citas || 0}</td>
+          <td class="col-porcentaje">${formatearNumeroRMS(porcentaje)}%</td>
+          <td>
+            <div class="rms-barra-wrap">
+              <div class="rms-barra" style="width:${width}%;"></div>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    return `
+      <div class="rms-card rms-tabla-card">
+        <h3 class="rms-seccion-titulo">📋 Desglose por Asesor</h3>
+        <div class="rms-separador"></div>
+
+        <div class="rms-tabla-responsive">
+          <table class="rms-tabla">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Asesor</th>
+                <th class="col-num">Citas</th>
+                <th class="col-porcentaje">% del total</th>
+                <th class="col-barra">Distribución</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filas}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderVacioRMS(res) {
+    const filtros = res.filtros || {};
+    const nombreMes = filtros.nombreMes || nombreMesRMS(filtros.mes);
+
+    return `
+      <div class="rms-card rms-reporte-header">
+        <h2 class="rms-reporte-titulo">Reporte Mensual por Asesor</h2>
+        <p class="rms-reporte-mes">${escapeHtmlRMS(nombreMes)} ${escapeHtmlRMS(String(filtros.anio || ""))}</p>
+        <div class="rms-chip-sucursal">
+          <span>🏢</span>
+          <strong>${escapeHtmlRMS(filtros.sucursal || "")}</strong>
+        </div>
+      </div>
+
+      <div class="rms-vacio">
+        <div class="rms-vacio-icono">📭</div>
+        <h3>Sin resultados</h3>
+        <p>
+          No se encontraron citas registradas para la sucursal y mes seleccionados.
+        </p>
+      </div>
+    `;
+  }
+
+  /* ==========================================================
+     UI / ESTADO
+     ========================================================== */
+  function bloquearUIRMS(valor) {
+    document.getElementById("rmsSucursal").disabled = valor;
+    document.getElementById("rmsMes").disabled = valor;
+    document.getElementById("rmsAnio").disabled = valor;
+    document.getElementById("btnMesActual").disabled = valor;
+    document.getElementById("btnGenerarReporteMensual").disabled = valor;
+  }
+
+  function setEstadoRMS(tipo, mensaje) {
+    const el = document.getElementById("rmsEstado");
+
+    el.classList.remove("oculto", "loading", "ok", "error");
+    el.classList.add(tipo);
+    el.textContent = mensaje || "";
+  }
+
+  function obtenerMensajeErrorRMS(err) {
+    if (!err) return "Ocurrió un error inesperado.";
+    return err.message || err.toString() || "Ocurrió un error inesperado.";
+  }
+
+  /* ==========================================================
+     UTILIDADES
+     ========================================================== */
+  function nombreMesRMS(mes) {
+    const nombres = [
+      "",
+      "Enero",
+      "Febrero",
+      "Marzo",
+      "Abril",
+      "Mayo",
+      "Junio",
+      "Julio",
+      "Agosto",
+      "Septiembre",
+      "Octubre",
+      "Noviembre",
+      "Diciembre"
+    ];
+
+    return nombres[Number(mes)] || "";
+  }
+
+  function formatearNumeroRMS(valor) {
+    const num = Number(valor || 0);
+
+    if (Number.isInteger(num)) {
+      return String(num);
+    }
+
+    return num.toFixed(1);
+  }
+
+  function escapeHtmlRMS(valor) {
+    return String(valor == null ? "" : valor)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>

@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <title>Registro de Citas</title>
+  <style>
+    /* Tus estilos existentes - mantener igual */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f2f5f9;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      padding: 24px 32px;
+    }
+
+    h1 {
+      color: #1e466e;
+      border-left: 5px solid #2a7faa;
+      padding-left: 18px;
+      margin-top: 0;
+      margin-bottom: 24px;
+    }
+
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .form-group {
+      flex: 1 1 calc(50% - 16px);
+      min-width: 200px;
+    }
+
+    .form-group.full-width {
+      flex: 1 1 100%;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #1f3a4b;
+    }
+
+    label .required {
+      color: #d9534f;
+      margin-left: 3px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccd7e6;
+      border-radius: 10px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    /* ===== MULTISELECT SUCURSALES ===== */
+
+    .multi-select {
+      position: relative;
+      width: 100%;
+    }
+
+    .multi-select-box {
+      min-height: 46px;
+      border: 1px solid #ccd7e6;
+      border-radius: 10px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    .multi-select-box:hover {
+      border-color: #2a7faa;
+    }
+
+    .multi-select-placeholder {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .multi-select-arrow {
+      font-size: 12px;
+      transition: .2s;
+    }
+
+    .multi-select.open .multi-select-arrow {
+      transform: rotate(180deg);
+    }
+
+    .multi-select-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 6px;
+      background: white;
+      border: 1px solid #ccd7e6;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
+      z-index: 999;
+      overflow: hidden;
+    }
+
+    .multi-select.open .multi-select-dropdown {
+      display: block;
+    }
+
+    .multi-select-search {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .multi-select-search input {
+      width: 100%;
+    }
+
+    .multi-select-options {
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .multi-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+
+    .multi-option:hover {
+      background: #f5f9fc;
+    }
+
+    .multi-option input {
+      width: auto;
+    }
+
+    .multi-selected {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .multi-chip {
+      background: #2a7faa;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .multi-chip span {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    /* =====================================================
+   MENÚ SUPERIOR DE LA APP WEB
+===================================================== */
+
+    .menu-superior {
+      position: sticky;
+      top: 0;
+      z-index: 2000;
+      background: #1e466e;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, .16);
+      margin: -20px -20px 24px;
+    }
+
+    .menu-superior-contenido {
+      max-width: 1064px;
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .menu-marca {
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 18px;
+      white-space: nowrap;
+    }
+
+    .menu-opciones {
+      display: flex;
+      gap: 8px;
+    }
+
+    .menu-opcion {
+      width: auto;
+      margin: 0;
+      padding: 9px 17px;
+      border-radius: 25px;
+      background: transparent;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, .45);
+      font-size: 14px;
+    }
+
+    .menu-opcion:hover {
+      background: rgba(255, 255, 255, .12);
+    }
+
+    .menu-opcion.activa {
+      background: #ffffff;
+      color: #1e466e;
+      border-color: #ffffff;
+    }
+
+    .vista-app {
+      display: none;
+    }
+
+    .vista-app.activa {
+      display: block;
+    }
+
+    @media(max-width: 650px) {
+
+      .menu-superior-contenido {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px 12px;
+      }
+
+      .menu-marca {
+        text-align: center;
+      }
+
+      .menu-opciones {
+        width: 100%;
+      }
+
+      .menu-opcion {
+        flex: 1;
+        padding: 9px 10px;
+      }
+
+    }
+
+    @media(max-width:768px) {
+
+      .multi-select-dropdown {
+
+        position: fixed;
+
+        left: 10px;
+
+        right: 10px;
+
+        top: 15%;
+
+        max-height: 70vh;
+
+      }
+
+      .multi-select-options {
+
+        max-height: 45vh;
+
+      }
+
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .checkbox-group input {
+      width: auto;
+      margin: 0;
+    }
+
+    button {
+      background-color: #2a7faa;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 40px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    button:hover {
+      background-color: #1e5f7e;
+    }
+
+    .message {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 12px;
+      text-align: center;
+      display: none;
+    }
+
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      text-align: left;
+    }
+
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      text-align: center;
+    }
+
+    .resumen-cita {
+      font-family: monospace;
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 10px 0;
+      white-space: pre-wrap;
+      font-size: 14px;
+      border-left: 4px solid #2a7faa;
+    }
+
+    .btn-copiar {
+      background-color: #28a745;
+      margin-top: 5px;
+      width: auto;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+
+    .btn-copiar:hover {
+      background-color: #218838;
+    }
+
+    /* ===== BOTONES DEL RESUMEN ===== */
+
+    .acciones-resumen {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .btn-limpiar {
+      background-color: #6c757d;
+      margin-top: 5px;
+      width: auto;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+
+    .btn-limpiar:hover {
+      background-color: #545b62;
+    }
+
+    @media(max-width: 600px) {
+
+      .acciones-resumen {
+        flex-direction: column;
+      }
+
+      .btn-copiar,
+      .btn-limpiar {
+        width: 100%;
+      }
+
+    }
+
+    .small-note {
+      font-size: 12px;
+      color: #6c757d;
+      margin-top: 5px;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #ccc;
+      border-top-color: #2a7faa;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-left: 10px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="menu-superior">
+
+    <div class="menu-superior-contenido">
+
+      <div class="menu-marca">
+        Sistema de Citas
+      </div>
+
+      <div class="menu-opciones">
+
+        <button
+        type="button"
+        id="menuRegistro"
+        class="menu-opcion activa"
+        onclick="mostrarVistaApp('registro')">
+        Registrar cita
+      </button>
+
+        <button
+        type="button"
+        id="menuRecuperar"
+        class="menu-opcion"
+        onclick="mostrarVistaApp('recuperar')">
+        Recuperar cita
+      </button>
+
+      </div>
+
+    </div>
+
+  </div>
+  <section id="vistaRegistro" class="vista-app activa">
+
+    <div class="container">
+      <h1>📅 Registrar nueva cita</h1>
+
+      <form id="citaForm">
+        <!-- Sección Sucursal Origen + Asesor -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>Sucursal Origen <span class="required">*</span></label>
+            <select id="sucursalOrigen" required>
+          <option value="">-- Seleccione sucursal --</option>
+        </select>
+          </div>
+          <div class="form-group">
+            <label>Asesor que contactó <span class="required">*</span></label>
+            <select id="asesor" required disabled>
+          <option value="">-- Primero elija sucursal --</option>
+        </select>
+          </div>
+        </div>
+
+        <!-- Datos del cliente -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre del Cliente <span class="required">*</span></label>
+            <input type="text" id="cliente" placeholder="Ej: María López" required>
+          </div>
+          <div class="form-group">
+            <label>Número de contacto <span class="required">*</span></label>
+            <input type="tel" id="numero" inputmode="numeric" pattern="[0-9]*"
+               maxlength="15" placeholder="Ej: 1234567890"
+               oninput="this.value = this.value.replace(/[^0-9]/g, '');" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Proceso / Trámite <span class="required">*</span></label>
+            <select id="proceso" required>
+          <option value="">-- Seleccione --</option>
+        </select>
+            <div id="otroProcesoDiv" style="display:none; margin-top:8px;">
+              <input type="text" id="otroProcesoText" placeholder="Especifique el proceso">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Precio ofrecido <span class="required">*</span></label>
+            <input type="text" id="precio" placeholder="Ej: $150 o 'pendiente'" required>
+            <div class="small-note">Puede escribir "pendiente" si aún no se define</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Extras (servicios adicionales)</label>
+            <textarea id="extras" rows="2" placeholder="Ej: Gestión de documentos, traducción..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Origen del contacto <span class="required">*</span></label>
+            <select id="origen" required>
+          <option value="">-- Seleccione --</option>
+        </select>
+            <div id="otroOrigenDiv" style="display:none; margin-top:8px;">
+              <input type="text" id="otroOrigenText" placeholder="Especifique el origen">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha de la cita <span class="required">*</span></label>
+            <input type="date" id="fechaCita">
+            <div class="checkbox-group">
+              <input type="checkbox" id="citaAbierta">
+              <label for="citaAbierta" style="margin:0">Cita abierta (sin fecha definida)</label>
+            </div>
+          </div>
+          <div class="form-group full-width">
+
+            <label>Sucursal(es) donde asistirá el cliente <span class="required">*</span></label>
+
+            <div class="multi-select" id="multiSucursal">
+
+              <div class="multi-select-box" id="multiSucursalBox">
+
+                <div class="multi-select-placeholder" id="multiSucursalTexto">
+
+                  Seleccione una o varias sucursales
+
+                </div>
+
+                <div class="multi-select-arrow">
+
+                  ▼
+
+                </div>
+
+              </div>
+
+              <div class="multi-select-dropdown">
+
+                <div class="multi-select-search">
+
+                  <input
+                  type="text"
+                  id="buscarSucursal"
+                  placeholder="Buscar sucursal...">
+
+                </div>
+
+                <div class="multi-select-options" id="listaSucursales">
+
+                </div>
+
+              </div>
+
+            </div>
+
+            <div class="multi-selected" id="sucursalesSeleccionadas">
+
+            </div>
+
+            <div class="small-note">
+
+              Puede seleccionar una o varias sucursales.
+
+            </div>
+
+          </div>
+        </div>
+
+        <div class="form-group full-width">
+          <label>Nota / Observaciones</label>
+          <textarea id="nota" rows="2" placeholder="Detalles adicionales que el asesor quiera mencionar..."></textarea>
+        </div>
+
+        <button type="submit" id="btnGuardar">✅ Guardar cita</button>
+        <div id="mensaje" class="message"></div>
+      </form>
+    </div>
+  </section>
+  <section id="vistaRecuperar" class="vista-app">
+
+    <?!= include('RecuperarCitaWeb'); ?>
+
+  </section>
+
+  <script>
+    let datosGlobales = {};
+
+let sucursalesSeleccionadas = [];
+let sucursalesDisponibles = [];
+
+/**
+ * Evita guardar nuevamente una cita
+ * hasta que el formulario sea limpiado.
+ */
+let citaGuardadaPendienteLimpieza = false;
+
+  
+  window.addEventListener('load', function() {
+    cargarDatosIniciales();
+    document.getElementById('sucursalOrigen').addEventListener('change', cargarAsesores);
+    document.getElementById('proceso').addEventListener('change', mostrarOtroProceso);
+    document.getElementById('origen').addEventListener('change', mostrarOtroOrigen);
+    document.getElementById('citaAbierta').addEventListener('change', toggleFechaCita);
+    document.getElementById('citaForm').addEventListener('submit', enviarFormulario);
+    if (typeof rcInicializar === 'function') {
+  rcInicializar();
+}
+  });
+  
+  function cargarDatosIniciales() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        datosGlobales = data;
+        const selectOrigen = document.getElementById('sucursalOrigen');
+        selectOrigen.innerHTML = '<option value="">-- Seleccione sucursal --</option>';
+        data.sucursalesOrigen.forEach(suc => {
+          const option = document.createElement('option');
+          option.value = suc;
+          option.textContent = suc;
+          selectOrigen.appendChild(option);
+        });
+        generarListaSucursales(data.sucursalesDestino);
+
+inicializarMultiSelect();
+        llenarSelect('proceso', data.opcionesProceso);
+        llenarSelect('origen', data.opcionesOrigen);
+      })
+      .withFailureHandler(function(error) {
+        mostrarMensaje('Error al cargar datos: ' + error.message, 'error');
+      })
+      .obtenerDatosIniciales();
+  }
+  
+  function generarListaSucursales(sucursales) {
+
+  sucursalesDisponibles = [...sucursales];
+
+  const lista = document.getElementById("listaSucursales");
+
+  lista.innerHTML = "";
+
+  sucursales.forEach(nombre => {
+
+    const fila = document.createElement("label");
+
+    fila.className = "multi-option";
+
+    fila.dataset.nombre = nombre.toLowerCase();
+
+    fila.innerHTML = `
+      <input type="checkbox" value="${nombre}">
+      <span>${nombre}</span>
+    `;
+
+    const check = fila.querySelector("input");
+
+    check.addEventListener("change", function(){
+
+      if(this.checked){
+
+        if(!sucursalesSeleccionadas.includes(nombre))
+          sucursalesSeleccionadas.push(nombre);
+
+      }else{
+
+        sucursalesSeleccionadas =
+          sucursalesSeleccionadas.filter(s=>s!==nombre);
+
+      }
+
+      actualizarChips();
+
+    });
+
+    lista.appendChild(fila);
+
+  });
+
+}
+
+function actualizarChips(){
+
+  const contenedor =
+      document.getElementById("sucursalesSeleccionadas");
+
+  const texto =
+      document.getElementById("multiSucursalTexto");
+
+  contenedor.innerHTML = "";
+
+  if(sucursalesSeleccionadas.length===0){
+
+      texto.textContent =
+      "Seleccione una o varias sucursales";
+
+      return;
+
+  }
+
+  texto.textContent =
+      sucursalesSeleccionadas.length +
+      " sucursal(es) seleccionada(s)";
+
+  sucursalesSeleccionadas.forEach(nombre=>{
+
+      const chip=document.createElement("div");
+
+      chip.className="multi-chip";
+
+      chip.innerHTML=`
+      ${nombre}
+      <span>&times;</span>
+      `;
+
+      chip.querySelector("span")
+      .addEventListener("click",function(e){
+
+          e.stopPropagation();
+
+          sucursalesSeleccionadas =
+          sucursalesSeleccionadas.filter(s=>s!==nombre);
+
+          document
+          .querySelectorAll("#listaSucursales input")
+          .forEach(c=>{
+
+              if(c.value===nombre)
+                  c.checked=false;
+
+          });
+
+          actualizarChips();
+
+      });
+
+      contenedor.appendChild(chip);
+
+  });
+
+}
+  
+  
+function inicializarMultiSelect(){
+
+const multi=document.getElementById("multiSucursal");
+
+const caja=document.getElementById("multiSucursalBox");
+
+const buscador=document.getElementById("buscarSucursal");
+
+caja.addEventListener("click",function(e){
+
+e.stopPropagation();
+
+multi.classList.toggle("open");
+
+if(multi.classList.contains("open")){
+
+buscador.focus();
+
+}
+
+});
+
+document.addEventListener("click",function(){
+
+multi.classList.remove("open");
+
+});
+
+multi
+.querySelector(".multi-select-dropdown")
+.addEventListener("click", function (e) {
+  e.stopPropagation();
+});
+
+buscador.addEventListener("keyup",function(){
+
+const texto=this.value.toLowerCase();
+
+document
+.querySelectorAll(".multi-option")
+.forEach(op=>{
+
+op.style.display=
+op.dataset.nombre.includes(texto)
+? "flex"
+: "none";
+
+});
+
+});
+
+}
+
+  function llenarSelect(id, opciones) {
+    const select = document.getElementById(id);
+    select.innerHTML = '<option value="">-- Seleccione --</option>';
+    opciones.forEach(op => {
+      const opt = document.createElement('option');
+      opt.value = op;
+      opt.textContent = op;
+      select.appendChild(opt);
+    });
+  }
+  
+  function cargarAsesores() {
+    const sucursal = document.getElementById('sucursalOrigen').value;
+    const selectAsesor = document.getElementById('asesor');
+    if (!sucursal) {
+      selectAsesor.innerHTML = '<option value="">-- Primero elija sucursal --</option>';
+      selectAsesor.disabled = true;
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(asesoresLista) {
+        selectAsesor.disabled = false;
+        selectAsesor.innerHTML = '<option value="">-- Seleccione asesor --</option>';
+        asesoresLista.forEach(asesor => {
+          const opt = document.createElement('option');
+          opt.value = asesor;
+          opt.textContent = asesor;
+          selectAsesor.appendChild(opt);
+        });
+      })
+      .withFailureHandler(function(error) {
+        mostrarMensaje('Error cargando asesores: ' + error.message, 'error');
+      })
+      .obtenerAsesoresPorSucursal(sucursal);
+  }
+  
+  function mostrarOtroProceso() {
+    const select = document.getElementById('proceso');
+    const otroDiv = document.getElementById('otroProcesoDiv');
+    if (select.value === 'Otro') {
+      otroDiv.style.display = 'block';
+      document.getElementById('otroProcesoText').required = true;
+    } else {
+      otroDiv.style.display = 'none';
+      document.getElementById('otroProcesoText').required = false;
+    }
+  }
+  
+  function mostrarOtroOrigen() {
+    const select = document.getElementById('origen');
+    const otroDiv = document.getElementById('otroOrigenDiv');
+    if (select.value === 'Otro') {
+      otroDiv.style.display = 'block';
+      document.getElementById('otroOrigenText').required = true;
+    } else {
+      otroDiv.style.display = 'none';
+      document.getElementById('otroOrigenText').required = false;
+    }
+  }
+  
+  function toggleFechaCita() {
+    const chk = document.getElementById('citaAbierta');
+    const dateInput = document.getElementById('fechaCita');
+    if (chk.checked) {
+      dateInput.disabled = true;
+      dateInput.value = '';
+    } else {
+      dateInput.disabled = false;
+    }
+  }
+  
+  function enviarFormulario(event) {
+
+  event.preventDefault();
+
+  const btn = document.getElementById('btnGuardar');
+
+  // =====================================================
+  // BLOQUEO DE DOBLE REGISTRO
+  // =====================================================
+
+  if (citaGuardadaPendienteLimpieza) {
+
+    mostrarMensaje(
+      'Esta cita ya fue guardada. Presione "Limpiar Form" antes de registrar una nueva cita.',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  const sucursalOrigen =
+    document.getElementById('sucursalOrigen').value;
+
+  const asesor =
+    document.getElementById('asesor').value;
+
+  const cliente =
+    document.getElementById('cliente').value.trim();
+
+  const numero =
+    document.getElementById('numero').value.trim();
+
+  let proceso =
+    document.getElementById('proceso').value;
+
+  const precio =
+    document.getElementById('precio').value.trim();
+
+  let origen =
+    document.getElementById('origen').value;
+
+  const extras =
+    document.getElementById('extras').value.trim();
+
+  const nota =
+    document.getElementById('nota').value.trim();
+
+  const sucursalesElegidas = [
+    ...sucursalesSeleccionadas
+  ];
+
+  const citaAbierta =
+    document.getElementById('citaAbierta').checked;
+
+  const fechaInput =
+    document.getElementById('fechaCita').value;
+
+
+  // =====================================================
+  // VALIDACIONES
+  // =====================================================
+
+  if (!sucursalOrigen) {
+
+    mostrarMensaje(
+      'Seleccione la Sucursal Origen',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  if (!asesor) {
+
+    mostrarMensaje(
+      'Seleccione el Asesor',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  if (!cliente) {
+
+    mostrarMensaje(
+      'Ingrese el nombre del cliente',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  if (!numero) {
+
+    mostrarMensaje(
+      'Ingrese el número de contacto',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !proceso ||
+    proceso === '-- Seleccione --'
+  ) {
+
+    mostrarMensaje(
+      'Seleccione un proceso válido',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  if (!precio) {
+
+    mostrarMensaje(
+      'Ingrese el precio ofrecido o "pendiente"',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !origen ||
+    origen === '-- Seleccione --'
+  ) {
+
+    mostrarMensaje(
+      'Seleccione el origen del contacto',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  if (sucursalesElegidas.length === 0) {
+
+    mostrarMensaje(
+      'Seleccione al menos una sucursal destino',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  // =====================================================
+  // FECHA
+  // =====================================================
+
+  let fechaFinal = '';
+
+  let hora = 'No especificada';
+
+
+  if (citaAbierta) {
+
+    fechaFinal = 'cita abierta';
+
+  } else {
+
+    if (!fechaInput) {
+
+      mostrarMensaje(
+        'Seleccione una fecha o marque "Cita abierta"',
+        'error'
+      );
+
+      return;
+
+    }
+
+
+    const partesFecha = fechaInput.split('-');
+
+const anio = partesFecha[0];
+const mes = partesFecha[1];
+const dia = partesFecha[2];
+
+fechaFinal = `${dia}/${mes}/${anio}`;
+
+  }
+
+
+  // =====================================================
+  // PROCESO OTRO
+  // =====================================================
+
+  if (proceso === 'Otro') {
+
+    const otroTexto =
+      document
+        .getElementById('otroProcesoText')
+        .value
+        .trim();
+
+    if (!otroTexto) {
+
+      mostrarMensaje(
+        'Especifique el proceso en el campo "Otro"',
+        'error'
+      );
+
+      return;
+
+    }
+
+    proceso = otroTexto;
+
+  }
+
+
+  // =====================================================
+  // ORIGEN OTRO
+  // =====================================================
+
+  if (origen === 'Otro') {
+
+    const otroOrigen =
+      document
+        .getElementById('otroOrigenText')
+        .value
+        .trim();
+
+    if (!otroOrigen) {
+
+      mostrarMensaje(
+        'Especifique el origen en el campo "Otro"',
+        'error'
+      );
+
+      return;
+
+    }
+
+    origen = otroOrigen;
+
+  }
+
+
+  // =====================================================
+  // DATOS
+  // =====================================================
+
+  const datos = {
+
+    cliente: cliente,
+
+    proceso: proceso,
+
+    numero: numero,
+
+    precio: precio,
+
+    extras: extras,
+
+    fecha: fechaFinal,
+
+    sucursalDestino:
+      sucursalesElegidas.join(', '),
+
+    asesor: asesor,
+
+    nota: nota,
+
+    origen: origen,
+
+    sucursalOrigen: sucursalOrigen
+
+  };
+
+
+  // =====================================================
+  // GUARDAR
+  // =====================================================
+
+  const originalText = btn.innerText;
+
+  btn.disabled = true;
+
+  btn.innerHTML =
+    'Guardando... <span class="loading"></span>';
+
+
+  google.script.run
+
+    .withSuccessHandler(function(respuesta) {
+
+      if (respuesta.exito) {
+
+        // Bloquear nuevos envíos hasta limpiar
+        citaGuardadaPendienteLimpieza = true;
+
+        // Mostrar resumen
+        mostrarResumenCita(
+          datos,
+          hora,
+          respuesta.id
+        );
+
+        // Mantener botón deshabilitado
+        btn.disabled = true;
+
+        btn.innerText =
+          'Cita guardada';
+
+      } else {
+
+        mostrarMensaje(
+          'Error: ' + respuesta.mensaje,
+          'error'
+        );
+
+        // Permitir intentar nuevamente
+        btn.disabled = false;
+
+        btn.innerText = originalText;
+
+      }
+
+    })
+
+    .withFailureHandler(function(error) {
+
+      mostrarMensaje(
+        'Error de conexión: ' + error.message,
+        'error'
+      );
+
+      // Como no sabemos si se guardó correctamente,
+      // permitimos nuevamente el botón.
+      btn.disabled = false;
+
+      btn.innerText = originalText;
+
+    })
+
+    .guardarCita(datos);
+
+}
+  
+  function mostrarResumenCita(datos, hora, id) {
+
+    const cabecera = `CITA AGENDADA - ${id}`;
+
+    const texto = `${cabecera}
+CLIENTE: ${datos.cliente}
+PROCESO: ${datos.proceso}
+PRECIO: ${datos.precio}
+EXTRAS: ${datos.extras || 'Ninguno'}
+FECHA: ${datos.fecha}
+HORA: ${hora}
+SUCURSAL: ${datos.sucursalDestino}
+ASESOR: ${datos.asesor}
+NOTA: ${datos.nota || 'Ninguna'}
+ORIGEN: ${datos.origen}
+SUCURSAL ORIGEN: ${datos.sucursalOrigen}`;
+
+    const msgDiv = document.getElementById('mensaje');
+
+    msgDiv.innerHTML = `
+      <div class="resumen-cita">
+        ${texto.replace(/\n/g, '<br>')}
+      </div>
+
+      <div class="acciones-resumen">
+
+        <button
+          type="button"
+          id="btnCopiarTexto"
+          class="btn-copiar">
+          📋 Copiar texto
+        </button>
+
+        <button
+          type="button"
+          id="btnLimpiarForm"
+          class="btn-limpiar">
+          Limpiar Form
+        </button>
+
+      </div>
+    `;
+
+    msgDiv.className = 'message success';
+    msgDiv.style.display = 'block';
+
+    document
+      .getElementById('btnCopiarTexto')
+      .addEventListener('click', function(event) {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        copiarTexto(texto);
+
+      });
+
+    document
+      .getElementById('btnLimpiarForm')
+      .addEventListener('click', function(event) {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        limpiarFormulario();
+
+      });
+
+  }
+
+  function limpiarFormulario() {
+// Permitir un nuevo registro
+citaGuardadaPendienteLimpieza = false;
+
+    // Resetear formulario principal
+    document.getElementById('citaForm').reset();
+
+    // Reiniciar selector múltiple
+    sucursalesSeleccionadas = [];
+
+    document
+      .querySelectorAll("#listaSucursales input")
+      .forEach(cb => {
+        cb.checked = false;
+      });
+
+    // Limpiar buscador de sucursal
+    document.getElementById("buscarSucursal").value = "";
+
+    // Mostrar nuevamente todas las sucursales
+    document
+      .querySelectorAll(".multi-option")
+      .forEach(op => {
+        op.style.display = "flex";
+      });
+
+    // Actualizar chips
+    actualizarChips();
+
+    // Cerrar selector múltiple
+    document
+      .getElementById("multiSucursal")
+      .classList.remove("open");
+
+    // Reiniciar selector de asesor
+    const selectAsesor = document.getElementById('asesor');
+
+    selectAsesor.innerHTML =
+      '<option value="">-- Primero elija sucursal --</option>';
+
+    selectAsesor.disabled = true;
+
+    // Ocultar campos "Otro"
+    document.getElementById('otroProcesoDiv').style.display = 'none';
+    document.getElementById('otroOrigenDiv').style.display = 'none';
+
+    document.getElementById('otroProcesoText').required = false;
+    document.getElementById('otroOrigenText').required = false;
+
+    // Reiniciar fecha
+    document.getElementById('citaAbierta').checked = false;
+    document.getElementById('fechaCita').disabled = false;
+
+    // Ocultar resumen anterior
+    const mensaje = document.getElementById('mensaje');
+
+    mensaje.innerHTML = "";
+    mensaje.style.display = "none";
+
+    const btnGuardar =
+  document.getElementById('btnGuardar');
+
+btnGuardar.disabled = false;
+btnGuardar.innerText = '✅ Guardar cita';
+
+    // Llevar al inicio de la página
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+
+  }
+
+  function copiarTexto(texto) {
+    navigator.clipboard.writeText(texto).then(() => {
+      const btn = document.getElementById('btnCopiarTexto');
+      if (btn) {
+        const originalText = btn.innerText;
+        btn.innerText = '✅ ¡Copiado!';
+        setTimeout(() => {
+          btn.innerText = originalText;
+        }, 2000);
+      }
+    }).catch(err => {
+      console.error('Error al copiar: ', err);
+      alert('No se pudo copiar automáticamente. Selecciona el texto manualmente.');
+    });
+  }
+  
+  function mostrarMensaje(texto, tipo) {
+    const msgDiv = document.getElementById('mensaje');
+    msgDiv.innerHTML = texto;
+    msgDiv.className = `message ${tipo}`;
+    msgDiv.style.display = 'block';
+    window.scrollTo({
+  top: 0,
+  behavior: "smooth"
+});
+    setTimeout(() => {
+      msgDiv.style.display = 'none';
+      if (tipo === 'success') msgDiv.innerHTML = '';
+    }, 4000);
+  }
+
+  /**
+ * Cambia entre Registro y Recuperar cita.
+ */
+function mostrarVistaApp(vista) {
+
+  const vistaRegistro =
+    document.getElementById('vistaRegistro');
+
+  const vistaRecuperar =
+    document.getElementById('vistaRecuperar');
+
+  const menuRegistro =
+    document.getElementById('menuRegistro');
+
+  const menuRecuperar =
+    document.getElementById('menuRecuperar');
+
+  if (vista === 'recuperar') {
+
+    vistaRegistro.classList.remove('activa');
+    vistaRecuperar.classList.add('activa');
+
+    menuRegistro.classList.remove('activa');
+    menuRecuperar.classList.add('activa');
+
+    /*
+     * Activa los eventos del componente la primera vez.
+     */
+    if (
+      typeof rcInicializar === 'function'
+    ) {
+      rcInicializar();
+    }
+
+    const input =
+      document.getElementById('rcNumero');
+
+    if (input) {
+      setTimeout(function() {
+        input.focus();
+      }, 100);
+    }
+
+  } else {
+
+    vistaRecuperar.classList.remove('activa');
+    vistaRegistro.classList.add('activa');
+
+    menuRecuperar.classList.remove('activa');
+    menuRegistro.classList.add('activa');
+
+  }
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+
+}
+  </script>
+</body>
+
+</html>

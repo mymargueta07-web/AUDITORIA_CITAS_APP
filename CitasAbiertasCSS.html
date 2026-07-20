@@ -1,0 +1,464 @@
+<style>
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  body {
+    background: #f4f6fb;
+    color: #243042;
+    padding: 20px;
+  }
+
+  .ca-wrapper {
+    max-width: 1150px;
+    margin: 0 auto;
+  }
+
+  /* ==========================================================
+     HEADER
+     ========================================================== */
+  .ca-header {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    margin-bottom: 18px;
+  }
+
+  .ca-header h2 {
+    font-size: 24px;
+    color: #1a73e8;
+    margin-bottom: 8px;
+  }
+
+  .ca-header p {
+    color: #5f6b7a;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ==========================================================
+     FILTROS
+     ========================================================== */
+  .ca-filtros {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    margin-bottom: 18px;
+
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 14px;
+    align-items: end;
+  }
+
+  .campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .campo label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #3c4b5d;
+  }
+
+  .campo select,
+  .campo input[type="date"] {
+    width: 100%;
+    height: 42px;
+    border: 1px solid #d7dde7;
+    border-radius: 10px;
+    padding: 0 12px;
+    font-size: 14px;
+    background: #fff;
+    color: #243042;
+    outline: none;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+
+  .campo select:focus,
+  .campo input[type="date"]:focus {
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+  }
+
+  .acciones {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 18px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, opacity .2s ease;
+    white-space: nowrap;
+  }
+
+  .btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  }
+
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .btn-primary {
+    background: #1a73e8;
+    color: #fff;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #1558b0;
+  }
+
+  .btn-success {
+    background: #34a853;
+    color: #fff;
+  }
+
+  .btn-success:hover:not(:disabled) {
+    background: #2a8a44;
+  }
+
+  /* ==========================================================
+     ESTADO
+     ========================================================== */
+  .ca-estado {
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+
+  .ca-estado.loading {
+    background: #e8f0fe;
+    color: #174ea6;
+    border: 1px solid #c6dafc;
+  }
+
+  .ca-estado.ok {
+    background: #e6f4ea;
+    color: #137333;
+    border: 1px solid #c4e6cb;
+  }
+
+  .ca-estado.error {
+    background: #fdecea;
+    color: #b3261e;
+    border: 1px solid #f2c7c3;
+  }
+
+  .oculto {
+    display: none !important;
+  }
+
+  /* ==========================================================
+     CONTENIDO
+     ========================================================== */
+  .ca-contenido {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .ca-bienvenida {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 45px 24px;
+    text-align: center;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  }
+
+  .ca-bienvenida .icono {
+    font-size: 42px;
+    margin-bottom: 14px;
+  }
+
+  .ca-bienvenida h3 {
+    color: #1a73e8;
+    margin-bottom: 8px;
+    font-size: 22px;
+  }
+
+  .ca-bienvenida p {
+    color: #5f6b7a;
+    font-size: 14px;
+  }
+
+  /* ==========================================================
+     TARJETA RESUMEN
+     ========================================================== */
+  .ca-resumen {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  }
+
+  .ca-resumen h3 {
+    font-size: 20px;
+    color: #1a73e8;
+    margin-bottom: 18px;
+  }
+
+  .ca-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .ca-meta-card {
+    background: #f8fafc;
+    border: 1px solid #e5ebf3;
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .ca-meta-card .label {
+    display: block;
+    font-size: 12px;
+    color: #6c7a89;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+
+  .ca-meta-card .value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #243042;
+    word-break: break-word;
+  }
+
+  .ca-kpis {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .ca-kpi {
+    background: linear-gradient(135deg, #1a73e8, #3b82f6);
+    color: #fff;
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(26, 115, 232, 0.20);
+  }
+
+  .ca-kpi .num {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+
+  .ca-kpi .txt {
+    font-size: 14px;
+    opacity: 0.95;
+  }
+
+  /* ==========================================================
+     TABLA DE ASESORES
+     ========================================================== */
+  .ca-tabla-wrap {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  }
+
+  .ca-tabla-wrap h3 {
+    font-size: 20px;
+    color: #1a73e8;
+    margin-bottom: 16px;
+  }
+
+  .tabla-responsive {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  table.ca-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 420px;
+  }
+
+  .ca-tabla thead th {
+    background: #f1f5fb;
+    color: #334155;
+    text-align: left;
+    font-size: 13px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #dbe4f0;
+  }
+
+  .ca-tabla tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #edf1f7;
+    font-size: 14px;
+    color: #243042;
+  }
+
+  .ca-tabla tbody tr:hover {
+    background: #fafcff;
+  }
+
+  .col-num {
+    text-align: center;
+    font-weight: bold;
+    width: 140px;
+  }
+
+  /* ==========================================================
+     SIN RESULTADOS
+     ========================================================== */
+  .ca-vacio {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 40px 24px;
+    text-align: center;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  }
+
+  .ca-vacio .icono {
+    font-size: 38px;
+    margin-bottom: 12px;
+  }
+
+  .ca-vacio h3 {
+    color: #1a73e8;
+    margin-bottom: 8px;
+    font-size: 20px;
+  }
+
+  .ca-vacio p {
+    color: #5f6b7a;
+    font-size: 14px;
+  }
+
+  /* ==========================================================
+     BLOQUE DE DESCARGA
+     ========================================================== */
+  .ca-descarga {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 18px 22px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    border-left: 5px solid #34a853;
+  }
+
+  .ca-descarga h4 {
+    color: #137333;
+    margin-bottom: 8px;
+    font-size: 17px;
+  }
+
+  .ca-descarga p {
+    color: #4a5565;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .ca-descarga a {
+    display: inline-block;
+    background: #34a853;
+    color: #fff;
+    text-decoration: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: bold;
+    transition: background .2s ease, transform .15s ease;
+  }
+
+  .ca-descarga a:hover {
+    background: #2a8a44;
+    transform: translateY(-1px);
+  }
+
+  /* ==========================================================
+     RESPONSIVE
+     ========================================================== */
+  @media (max-width: 980px) {
+    .ca-filtros {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .acciones {
+      grid-column: 1 / -1;
+      justify-content: flex-start;
+    }
+
+    .ca-meta {
+      grid-template-columns: 1fr;
+    }
+
+    .ca-kpis {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    body {
+      padding: 14px;
+    }
+
+    .ca-header,
+    .ca-filtros,
+    .ca-resumen,
+    .ca-tabla-wrap,
+    .ca-bienvenida,
+    .ca-vacio,
+    .ca-descarga {
+      padding: 18px;
+      border-radius: 12px;
+    }
+
+    .ca-header h2 {
+      font-size: 21px;
+    }
+
+    .ca-filtros {
+      grid-template-columns: 1fr;
+    }
+
+    .acciones {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .btn {
+      width: 100%;
+    }
+
+    .ca-kpi .num {
+      font-size: 24px;
+    }
+
+    .ca-tabla thead th,
+    .ca-tabla tbody td {
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+  }
+
+</style>

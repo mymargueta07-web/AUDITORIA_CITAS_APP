@@ -1,0 +1,587 @@
+<script>
+
+let STATE = {
+  datos: [],
+  resumen: {}
+};
+
+document.addEventListener("DOMContentLoaded", init);
+
+function init() {
+
+  setFechaHoy();
+
+  document.getElementById("btnBuscar").addEventListener("click", cargar);
+
+  document.getElementById("btnHoy").addEventListener("click", () => {
+    setFechaHoy();
+    cargar();
+  });
+
+  cargar();
+}
+
+function setFechaHoy() {
+
+  const hoy = new Date();
+
+  const yyyy = hoy.getFullYear();
+  const mm = String(hoy.getMonth() + 1).padStart(2, "0");
+  const dd = String(hoy.getDate()).padStart(2, "0");
+
+  document.getElementById("fecha").value = `${yyyy}-${mm}-${dd}`;
+}
+
+/*=====================================================
+CARGAR DATOS
+=====================================================*/
+
+function cargar() {
+
+  const fecha = document.getElementById("fecha").value;
+
+  setEstado("loading", "Cargando citas...");
+
+  limpiar();
+
+  google.script.run
+    .withSuccessHandler(res => {
+
+      if (!res.ok) {
+        setEstado("error", res.mensaje);
+        return;
+      }
+
+      STATE.datos = res.data || [];
+      STATE.resumen = res.resumen || {};
+
+      setEstado("ok", `${res.total} citas encontradas`);
+
+      render();
+
+    })
+    .withFailureHandler(err => {
+
+      setEstado("error", err.message || err.toString());
+
+    })
+    .getCitasByFecha(fecha);
+
+}
+
+/*=====================================================
+RENDER
+=====================================================*/
+
+function render() {
+
+  renderResumenGeneral();
+
+  renderContenido();
+
+}
+
+/*=====================================================
+RESUMEN GENERAL
+=====================================================*/
+
+function renderResumenGeneral() {
+
+  const r = STATE.resumen;
+
+  const cont = document.getElementById("resumenGeneral");
+
+  if (!cont) return;
+
+  if (!r || Object.keys(r).length === 0) {
+
+    cont.innerHTML = "";
+
+    return;
+
+  }
+
+  cont.innerHTML = `
+
+<div class="resumen-general">
+
+    <h3>📊 Resumen General</h3>
+
+    <div class="kpis">
+
+        <div class="kpi">
+            <div class="num">${r.proyecciones || 0}</div>
+            <div>PROYECCIONES</div>
+        </div>
+
+        <div class="kpi">
+            <div class="num">${r.sucursalesConCitas || 0}</div>
+            <div>Sucursales con citas</div>
+        </div>
+
+        <div class="kpi">
+            <div class="num">${r.sucursalesSinCitas || 0}</div>
+            <div>Sucursales sin citas</div>
+        </div>
+
+    </div>
+
+    <div class="listas">
+
+        <div class="lista verde">
+
+            <h4>✔ Sucursales con citas</h4>
+
+            <div>
+
+                ${(r.listaConCitas || [])
+                  .map(s => `<span>${s}</span>`)
+                  .join("")}
+
+            </div>
+
+        </div>
+
+        <div class="lista rojo">
+
+            <h4>✖ Sucursales sin citas</h4>
+
+            <div>
+
+                ${(r.listaSinCitas || [])
+                  .map(s => `<span>${s}</span>`)
+                  .join("")}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+`;
+
+}
+
+/*=====================================================
+CONTENIDO
+=====================================================*/
+
+function renderContenido() {
+
+  const data = STATE.datos;
+
+  const cont =
+    document.getElementById("contenido");
+
+  cont.innerHTML = "";
+
+  if (!data.length) {
+
+    cont.innerHTML = `
+      <div class="sin-registros">
+        No se encontraron citas para esta fecha.
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  data.forEach(function(sucursal, indice) {
+
+    // =====================================================
+    // CARD PRINCIPAL DE SUCURSAL
+    // =====================================================
+
+    const bloque =
+      document.createElement("div");
+
+    bloque.className =
+      "sucursal-card";
+
+    bloque.id =
+      "sucursal_" +
+      safeId(sucursal.sucursal);
+
+
+    // Primera sucursal abierta automáticamente.
+    if (indice === 0) {
+
+      bloque.classList.add("abierta");
+
+    }
+
+
+    // =====================================================
+    // ENCABEZADO DEL ACORDEÓN
+    // =====================================================
+
+    const titulo =
+      document.createElement("div");
+
+    titulo.className =
+      "sucursal-titulo";
+
+
+    titulo.innerHTML = `
+
+      <div class="sucursal-identidad">
+
+        <span class="sucursal-icono">
+          📍
+        </span>
+
+        <span class="sucursal-nombre">
+          ${escapeHtml(sucursal.sucursal)}
+        </span>
+
+      </div>
+
+
+      <div class="sucursal-info">
+
+        <span class="sucursal-contador">
+
+          ${sucursal.cantidad}
+
+          ${
+            sucursal.cantidad === 1
+              ? "cita"
+              : "citas"
+          }
+
+        </span>
+
+        <span class="sucursal-flecha">
+          ▼
+        </span>
+
+      </div>
+
+    `;
+
+
+    // =====================================================
+    // CONTENIDO DEL ACORDEÓN
+    // =====================================================
+
+    const contenido =
+      document.createElement("div");
+
+    contenido.className =
+      "sucursal-contenido";
+
+
+    titulo.addEventListener(
+      "click",
+      function() {
+
+        bloque.classList.toggle(
+          "abierta"
+        );
+
+      }
+    );
+
+
+    // =====================================================
+    // CARDS POR ASESOR
+    // =====================================================
+
+    sucursal.asesores.forEach(
+      function(asesor) {
+
+        const box =
+          document.createElement("div");
+
+        box.className =
+          "asesor-card";
+
+
+        const encabezadoAsesor =
+          document.createElement("div");
+
+        encabezadoAsesor.className =
+          "asesor-encabezado";
+
+
+        encabezadoAsesor.innerHTML = `
+
+          <div class="asesor-icono">
+            👤
+          </div>
+
+          <div class="asesor-nombre">
+            ${escapeHtml(asesor.asesor)}
+          </div>
+
+          <div class="asesor-contador">
+
+            ${asesor.cantidad}
+
+            ${
+              asesor.cantidad === 1
+                ? "cita"
+                : "citas"
+            }
+
+          </div>
+
+        `;
+
+
+        // =================================================
+        // TABLA
+        // =================================================
+
+        const tablaContenedor =
+          document.createElement("div");
+
+        tablaContenedor.className =
+          "tabla-contenedor";
+
+
+        const tabla =
+          document.createElement("table");
+
+
+        tabla.innerHTML = `
+
+          <thead>
+
+            <tr>
+
+              <th class="col-cliente">
+                👤 Cliente
+              </th>
+
+              <th class="col-proceso">
+                💼 Proceso
+              </th>
+
+              <th class="col-oficina">
+                🏢 Oficina a visitar
+              </th>
+
+              <th class="col-estado">
+                ℹ Estado
+              </th>
+
+            </tr>
+
+          </thead>
+
+          <tbody></tbody>
+
+        `;
+
+
+        const tbody =
+          tabla.querySelector("tbody");
+
+
+        asesor.citas.forEach(
+          function(cita) {
+
+            const tr =
+              document.createElement("tr");
+
+
+            tr.innerHTML = `
+
+              <td class="col-cliente">
+                ${escapeHtml(cita.cliente)}
+              </td>
+
+              <td class="col-proceso">
+                ${escapeHtml(cita.proceso)}
+              </td>
+
+              <td class="col-oficina">
+
+                ${escapeHtml(
+                  cita.oficinaVisita ||
+                  "SIN DEFINIR"
+                )}
+
+              </td>
+
+              <td class="col-estado">
+
+                ${estadoBadge(
+                  cita.estado
+                )}
+
+              </td>
+
+            `;
+
+
+            tbody.appendChild(tr);
+
+          }
+        );
+
+
+        tablaContenedor.appendChild(
+          tabla
+        );
+
+        box.appendChild(
+          encabezadoAsesor
+        );
+
+        box.appendChild(
+          tablaContenedor
+        );
+
+        contenido.appendChild(
+          box
+        );
+
+      }
+    );
+
+
+    bloque.appendChild(titulo);
+
+    bloque.appendChild(contenido);
+
+    cont.appendChild(bloque);
+
+  });
+
+}
+/*=====================================================
+ESTADO
+=====================================================*/
+
+function setEstado(tipo, msg) {
+
+  const el = document.getElementById("estado");
+
+  el.classList.remove("oculto");
+
+  let clase = "";
+
+  if (tipo === "loading") clase = "loading";
+
+  if (tipo === "error") clase = "error";
+
+  if (tipo === "ok") clase = "ok";
+
+  el.className = "estado " + clase;
+
+  el.textContent = msg;
+
+}
+
+/*=====================================================
+UTILIDADES
+=====================================================*/
+
+function limpiar() {
+
+  document.getElementById("contenido").innerHTML = "";
+
+  const resumen = document.getElementById("resumenGeneral");
+
+  if (resumen) resumen.innerHTML = "";
+
+}
+
+function safeId(texto) {
+
+  return (texto || "")
+    .toString()
+    .replace(/\s+/g, "_")
+    .replace(/[^\w]/g, "");
+
+}
+
+function estadoBadge(estado) {
+
+  const texto =
+    String(estado || "")
+      .trim();
+
+  const normalizado =
+    texto.toUpperCase();
+
+
+  let clase =
+    "estado-espera";
+
+
+  if (
+    normalizado.includes("VENTA")
+  ) {
+
+    clase =
+      "estado-venta";
+
+  } else if (
+    normalizado.includes("REPROGRAM")
+  ) {
+
+    clase =
+      "estado-reprogramada";
+
+  } else if (
+    normalizado.includes("CANCEL")
+  ) {
+
+    clase =
+      "estado-cancelada";
+
+  } else if (
+    normalizado.includes(
+      "SIN RESPUESTA"
+    )
+  ) {
+
+    clase =
+      "estado-sin-respuesta";
+
+  } else if (
+    normalizado === "BO"
+  ) {
+
+    clase =
+      "estado-bo";
+
+  }
+
+
+  return `
+
+    <span class="estado-cita ${clase}">
+
+      ${escapeHtml(texto)}
+
+    </span>
+
+  `;
+
+}
+
+function escapeHtml(valor) {
+
+  return String(valor || "")
+
+    .replace(/&/g, "&amp;")
+
+    .replace(/</g, "&lt;")
+
+    .replace(/>/g, "&gt;")
+
+    .replace(/"/g, "&quot;")
+
+    .replace(/'/g, "&#039;");
+
+}
+
+</script>

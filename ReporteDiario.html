@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <?!= include('ReporteDiarioCSS'); ?>
+</head>
+
+<body>
+
+<div class="contenedor">
+
+    <!-- Encabezado -->
+    <div class="encabezado">
+
+        <h2>📊 Reporte Diario de Citas</h2>
+
+        <div class="controles">
+
+            <input
+                type="date"
+                id="fechaReporte">
+
+            <button id="btnBuscar">
+                Buscar
+            </button>
+
+            <button id="btnHoy">
+                Hoy
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="loading oculto">
+
+        <div class="spinner"></div>
+
+        <div>Generando reporte...</div>
+
+    </div>
+
+    <!-- Mensajes -->
+    <div id="mensaje" class="mensaje oculto"></div>
+
+    <!-- Resumen -->
+    <div id="resumen"></div>
+
+    <!-- Tabla -->
+    <div id="tablaReporte"></div>
+
+</div>
+
+<?!= include('ReporteDiarioJS'); ?>
+
+</body>
+
+</html>

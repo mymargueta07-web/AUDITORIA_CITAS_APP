@@ -1,0 +1,222 @@
+<style>
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+    background:#f5f5f5;
+    padding:20px;
+}
+
+.contenedor{
+    max-width:1200px;
+    margin:auto;
+}
+
+/*==========================
+  ENCABEZADO
+==========================*/
+
+.encabezado{
+    background:#fff;
+    border-radius:10px;
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.encabezado h2{
+    color:#1565c0;
+    margin-bottom:18px;
+    text-align:center;
+}
+
+.controles{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.controles input[type="date"]{
+    padding:10px 14px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    font-size:14px;
+}
+
+.controles button{
+    padding:10px 18px;
+    border:none;
+    border-radius:6px;
+    background:#1976d2;
+    color:white;
+    cursor:pointer;
+    font-size:14px;
+    transition:.25s;
+}
+
+.controles button:hover{
+    background:#0d47a1;
+}
+
+/*==========================
+  LOADING
+==========================*/
+
+.loading{
+    background:white;
+    border-radius:10px;
+    padding:30px;
+    text-align:center;
+    margin-bottom:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.oculto{
+    display:none;
+}
+
+.spinner{
+    width:42px;
+    height:42px;
+    margin:auto;
+    border:5px solid #ddd;
+    border-top:5px solid #1976d2;
+    border-radius:50%;
+    animation:girar 1s linear infinite;
+    margin-bottom:12px;
+}
+
+@keyframes girar{
+    to{
+        transform:rotate(360deg);
+    }
+}
+
+/*==========================
+  MENSAJES
+==========================*/
+
+.mensaje{
+    margin-bottom:20px;
+    padding:14px;
+    border-radius:8px;
+    font-weight:bold;
+    text-align:center;
+}
+
+.mensaje.error{
+    background:#ffebee;
+    color:#c62828;
+    border:1px solid #ef9a9a;
+}
+
+.mensaje.ok{
+    background:#e8f5e9;
+    color:#2e7d32;
+    border:1px solid #81c784;
+}
+
+/*==========================
+  TARJETAS RESUMEN
+==========================*/
+
+#resumen{
+    margin-bottom:20px;
+}
+
+.tarjetas{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:18px;
+}
+
+.tarjeta{
+    background:white;
+    border-radius:10px;
+    padding:18px;
+    text-align:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.tarjeta .titulo{
+    color:#555;
+    font-size:15px;
+}
+
+.tarjeta .valor{
+    margin-top:12px;
+    font-size:38px;
+    font-weight:bold;
+    color:#1565c0;
+}
+
+/*==========================
+  TABLA
+==========================*/
+
+#tablaReporte{
+    background:white;
+    border-radius:10px;
+    padding:18px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+    overflow-x:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+thead{
+    background:#1976d2;
+    color:white;
+}
+
+th{
+    padding:12px;
+    text-align:left;
+}
+
+td{
+    padding:11px;
+    border-bottom:1px solid #ececec;
+}
+
+tbody tr:hover{
+    background:#f5f9ff;
+}
+
+tfoot{
+    background:#e8eef7;
+    font-weight:bold;
+}
+
+tfoot td{
+    padding:13px;
+}
+
+/*==========================
+  RESPONSIVE
+==========================*/
+
+@media(max-width:700px){
+
+    .controles{
+        flex-direction:column;
+    }
+
+    .controles input,
+    .controles button{
+        width:100%;
+    }
+
+}
+
+</style>

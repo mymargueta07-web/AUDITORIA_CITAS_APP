@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= include('CitasAbiertasCSS'); ?>
+</head>
+<body>
+
+  <div class="ca-wrapper">
+
+    <!-- ENCABEZADO -->
+    <div class="ca-header">
+      <div>
+        <h2>📂 Reporte de Citas Abiertas</h2>
+        <p>
+          Consulta citas abiertas por sucursal, filtra por rango de registro
+          y exporta el resultado a Excel separado por asesor.
+        </p>
+      </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="ca-filtros">
+
+      <div class="campo">
+        <label for="sucursal">Sucursal</label>
+        <select id="sucursal">
+          <option value="">Cargando sucursales...</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label for="fechaDesde">Desde</label>
+        <input type="date" id="fechaDesde">
+      </div>
+
+      <div class="campo">
+        <label for="fechaHasta">Hasta</label>
+        <input type="date" id="fechaHasta">
+      </div>
+
+      <div class="acciones">
+        <button id="btnGenerar" class="btn btn-primary">
+          Generar reporte
+        </button>
+
+        <button id="btnExportar" class="btn btn-success" disabled>
+          Exportar a Excel
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ESTADO -->
+    <div id="estado" class="ca-estado oculto"></div>
+
+    <!-- CONTENIDO -->
+    <div id="contenido" class="ca-contenido">
+
+      <div class="ca-bienvenida">
+        <div class="icono">📑</div>
+        <h3>Reporte de Citas Abiertas</h3>
+        <p>
+          Selecciona una sucursal y un rango de fechas para generar el reporte.
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+  <?!= include('CitasAbiertasJS'); ?>
+</body>
+</html>

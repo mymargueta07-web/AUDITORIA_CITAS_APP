@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <base target="_top">
+
+  <meta charset="UTF-8">
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f2f5f9;
+      margin: 0;
+      padding: 22px;
+      color: #1f3a4b;
+    }
+
+    .contenedor {
+      max-width: 950px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .09);
+      margin-bottom: 18px;
+    }
+
+    h2 {
+      margin: 0 0 8px;
+      color: #1e466e;
+    }
+
+    .descripcion {
+      margin: 0 0 20px;
+      color: #607080;
+      font-size: 14px;
+    }
+
+    .busqueda {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .busqueda input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid #ccd7e6;
+      border-radius: 10px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .busqueda input:focus {
+      border-color: #2a7faa;
+      box-shadow: 0 0 0 3px rgba(42, 127, 170, .12);
+    }
+
+    button {
+      border: none;
+      border-radius: 30px;
+      padding: 11px 22px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-buscar {
+      background: #2a7faa;
+      color: #ffffff;
+    }
+
+    .btn-buscar:hover {
+      background: #1e5f7e;
+    }
+
+    .btn-buscar:disabled {
+      opacity: .65;
+      cursor: wait;
+    }
+
+    .estado {
+      display: none;
+      padding: 13px 16px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+      font-size: 14px;
+    }
+
+    .estado.cargando {
+      display: block;
+      background: #e8f0fe;
+      color: #1a5aa5;
+    }
+
+    .estado.error {
+      display: block;
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .estado.correcto {
+      display: block;
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .sin-resultados {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 35px 20px;
+      text-align: center;
+      color: #6c757d;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .07);
+    }
+
+    .resultado {
+      background: #d8f0df;
+      border-radius: 15px;
+      padding: 14px;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .07);
+    }
+
+    .resultado-cabecera {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .resultado-numero {
+      font-weight: 700;
+      color: #1e466e;
+    }
+
+    .resumen-cita {
+      margin: 0;
+      background: #f8f9fa;
+      border-left: 4px solid #2a7faa;
+      border-radius: 9px;
+      padding: 14px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 14px;
+      line-height: 1.45;
+      color: #063b22;
+    }
+
+    .acciones {
+      margin-top: 12px;
+    }
+
+    .btn-copiar {
+      background: #28a745;
+      color: #ffffff;
+      padding: 8px 16px;
+    }
+
+    .btn-copiar:hover {
+      background: #218838;
+    }
+
+    .detalle-adicional {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #52616f;
+    }
+
+    @media(max-width: 650px) {
+
+      body {
+        padding: 12px;
+      }
+
+      .panel {
+        padding: 18px;
+      }
+
+      .busqueda {
+        flex-direction: column;
+      }
+
+      .busqueda button {
+        width: 100%;
+      }
+
+      .resultado-cabecera {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .btn-copiar {
+        width: 100%;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <div class="contenedor">
+
+    <div class="panel">
+
+      <h2>Recuperar cita</h2>
+
+      <p class="descripcion">
+        Ingrese el número de contacto utilizado al registrar
+        la cita.
+      </p>
+
+      <div class="busqueda">
+
+        <input
+          type="tel"
+          id="numero"
+          placeholder="Ejemplo: 7000 0000 o +503 7000 0000"
+          autocomplete="off">
+
+        <button
+          type="button"
+          id="btnBuscar"
+          class="btn-buscar">
+          Buscar cita
+        </button>
+
+      </div>
+
+    </div>
+
+    <div id="estado" class="estado"></div>
+
+    <div id="resultados"></div>
+
+  </div>
+
+  <script>
+
+    document.addEventListener(
+      'DOMContentLoaded',
+      inicializar
+    );
+
+
+    function inicializar() {
+
+      const inputNumero =
+        document.getElementById('numero');
+
+      document
+        .getElementById('btnBuscar')
+        .addEventListener(
+          'click',
+          buscarCitas
+        );
+
+      inputNumero.addEventListener(
+        'keydown',
+        function(event) {
+
+          if (event.key === 'Enter') {
+
+            event.preventDefault();
+            buscarCitas();
+
+          }
+
+        }
+      );
+
+      inputNumero.focus();
+
+    }
+
+
+    function buscarCitas() {
+
+      const input =
+        document.getElementById('numero');
+
+      const numero = input.value.trim();
+
+      if (!numero) {
+
+        mostrarEstado(
+          'error',
+          'Ingrese el número de contacto que desea buscar.'
+        );
+
+        input.focus();
+        return;
+
+      }
+
+      const boton =
+        document.getElementById('btnBuscar');
+
+      boton.disabled = true;
+      boton.textContent = 'Buscando...';
+
+      document
+        .getElementById('resultados')
+        .innerHTML = '';
+
+      mostrarEstado(
+        'cargando',
+        'Buscando citas registradas...'
+      );
+
+      google.script.run
+
+        .withSuccessHandler(function(respuesta) {
+
+          boton.disabled = false;
+          boton.textContent = 'Buscar cita';
+
+          if (!respuesta || !respuesta.ok) {
+
+            mostrarEstado(
+              'error',
+              respuesta && respuesta.mensaje
+                ? respuesta.mensaje
+                : 'No fue posible realizar la búsqueda.'
+            );
+
+            return;
+
+          }
+
+          renderizarResultados(respuesta);
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          boton.disabled = false;
+          boton.textContent = 'Buscar cita';
+
+          mostrarEstado(
+            'error',
+            error.message || error.toString()
+          );
+
+        })
+
+        .buscarCitasPorNumero(numero);
+
+    }
+
+
+    function renderizarResultados(respuesta) {
+
+      const contenedor =
+        document.getElementById('resultados');
+
+      contenedor.innerHTML = '';
+
+      const resultados =
+        respuesta.resultados || [];
+
+      if (!resultados.length) {
+
+        ocultarEstado();
+
+        contenedor.innerHTML = `
+          <div class="sin-resultados">
+            No se encontraron citas registradas
+            con ese número.
+          </div>
+        `;
+
+        return;
+
+      }
+
+      mostrarEstado(
+        'correcto',
+        resultados.length === 1
+          ? 'Se encontró 1 cita.'
+          : `Se encontraron ${resultados.length} citas.`
+      );
+
+      resultados.forEach(function(cita, indice) {
+
+        const bloque =
+          document.createElement('div');
+
+        bloque.className = 'resultado';
+
+        const cabecera =
+          document.createElement('div');
+
+        cabecera.className =
+          'resultado-cabecera';
+
+        const titulo =
+          document.createElement('div');
+
+        titulo.className =
+          'resultado-numero';
+
+        titulo.textContent =
+          resultados.length > 1
+            ? `Resultado ${indice + 1} de ${resultados.length}`
+            : 'Cita encontrada';
+
+        cabecera.appendChild(titulo);
+
+        const resumen =
+          document.createElement('pre');
+
+        resumen.className = 'resumen-cita';
+        resumen.textContent = cita.resumen;
+
+        const acciones =
+          document.createElement('div');
+
+        acciones.className = 'acciones';
+
+        const botonCopiar =
+          document.createElement('button');
+
+        botonCopiar.type = 'button';
+        botonCopiar.className = 'btn-copiar';
+        botonCopiar.textContent = '📋 Copiar texto';
+
+        botonCopiar.addEventListener(
+          'click',
+          function() {
+
+            copiarResumen(
+              cita.resumen,
+              botonCopiar
+            );
+
+          }
+        );
+
+        acciones.appendChild(botonCopiar);
+
+        bloque.appendChild(cabecera);
+        bloque.appendChild(resumen);
+        bloque.appendChild(acciones);
+
+        contenedor.appendChild(bloque);
+
+      });
+
+    }
+
+
+    function copiarResumen(texto, boton) {
+
+      navigator.clipboard
+        .writeText(texto)
+
+        .then(function() {
+
+          const textoAnterior =
+            boton.textContent;
+
+          boton.textContent = '✅ Copiado';
+
+          setTimeout(function() {
+
+            boton.textContent =
+              textoAnterior;
+
+          }, 1800);
+
+        })
+
+        .catch(function() {
+
+          copiarTextoAlternativo(texto);
+
+          const textoAnterior =
+            boton.textContent;
+
+          boton.textContent = '✅ Copiado';
+
+          setTimeout(function() {
+
+            boton.textContent =
+              textoAnterior;
+
+          }, 1800);
+
+        });
+
+    }
+
+
+    function copiarTextoAlternativo(texto) {
+
+      const area =
+        document.createElement('textarea');
+
+      area.value = texto;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+
+      document.body.appendChild(area);
+
+      area.select();
+
+      document.execCommand('copy');
+
+      document.body.removeChild(area);
+
+    }
+
+
+    function mostrarEstado(tipo, mensaje) {
+
+      const estado =
+        document.getElementById('estado');
+
+      estado.className =
+        'estado ' + tipo;
+
+      estado.textContent = mensaje;
+
+    }
+
+
+    function ocultarEstado() {
+
+      const estado =
+        document.getElementById('estado');
+
+      estado.className = 'estado';
+      estado.textContent = '';
+
+    }
+
+  </script>
+
+</body>
+
+</html>

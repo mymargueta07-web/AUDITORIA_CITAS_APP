@@ -1,0 +1,266 @@
+<script>
+
+document.addEventListener("DOMContentLoaded", iniciar);
+
+function iniciar() {
+
+    colocarFechaHoy();
+
+    document
+        .getElementById("btnHoy")
+        .addEventListener("click", colocarFechaHoy);
+
+    document
+        .getElementById("btnBuscar")
+        .addEventListener("click", consultarReporte);
+
+}
+
+
+/*=========================================================
+  FECHA
+=========================================================*/
+
+function colocarFechaHoy() {
+
+    const hoy = new Date();
+
+    const fecha =
+        hoy.getFullYear() + "-" +
+        String(hoy.getMonth() + 1).padStart(2, "0") + "-" +
+        String(hoy.getDate()).padStart(2, "0");
+
+    document.getElementById("fechaReporte").value = fecha;
+
+}
+
+
+/*=========================================================
+  CONSULTAR
+=========================================================*/
+
+function consultarReporte() {
+
+    const fecha = document.getElementById("fechaReporte").value;
+
+    if (!fecha) {
+
+        mostrarMensaje("Seleccione una fecha.", "error");
+        return;
+
+    }
+
+    mostrarLoading(true);
+
+    google.script.run
+
+        .withSuccessHandler(mostrarReporte)
+
+        .withFailureHandler(function(error){
+
+            mostrarLoading(false);
+
+            mostrarMensaje(error.message, "error");
+
+        })
+
+        .obtenerReporteDiario(fecha);
+
+}
+
+
+/*=========================================================
+  RECIBE EL REPORTE
+=========================================================*/
+
+function mostrarReporte(datos){
+
+    mostrarLoading(false);
+
+    if(!datos){
+
+        mostrarMensaje("No se recibieron datos.", "error");
+        return;
+
+    }
+
+    construirResumen(datos.resumen);
+
+    construirTabla(datos.sucursales);
+
+}
+
+
+/*=========================================================
+  RESUMEN
+=========================================================*/
+
+function construirResumen(resumen){
+
+    const html = `
+
+        <div class="tarjetas">
+
+            <div class="tarjeta">
+                <div class="titulo">
+                    Total Sucursales
+                </div>
+                <div class="valor">
+                    ${resumen.totalSucursales}
+                </div>
+            </div>
+
+            <div class="tarjeta">
+                <div class="titulo">
+                    Citas Registradas
+                </div>
+                <div class="valor">
+                    ${resumen.totalCitas}
+                </div>
+            </div>
+
+            <div class="tarjeta">
+                <div class="titulo">
+                    Ventas Cerradas
+                </div>
+                <div class="valor">
+                    ${resumen.totalVentas}
+                </div>
+            </div>
+
+            <div class="tarjeta">
+                <div class="titulo">
+                    Ventas Atención al Cliente
+                </div>
+                <div class="valor">
+                    ${resumen.totalAtencion}
+                </div>
+            </div>
+
+        </div>
+
+    `;
+
+    document.getElementById("resumen").innerHTML = html;
+
+}
+
+
+/*=========================================================
+  TABLA
+=========================================================*/
+
+function construirTabla(lista){
+
+    let html = `
+
+    <table>
+
+        <thead>
+
+            <tr>
+
+                <th>Sucursal</th>
+
+                <th>Citas Registradas</th>
+
+                <th>Ventas Cerradas</th>
+
+                <th>Ventas Atención al Cliente</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+    `;
+
+    let totalCitas = 0;
+    let totalVentas = 0;
+    let totalAtencion = 0;
+
+    lista.forEach(function(item){
+
+        totalCitas += item.citas;
+        totalVentas += item.ventas;
+        totalAtencion += item.atencion;
+
+        html += `
+
+            <tr>
+
+                <td>${item.nombre}</td>
+
+                <td>${item.citas}</td>
+
+                <td>${item.ventas}</td>
+
+                <td>${item.atencion}</td>
+
+            </tr>
+
+        `;
+
+    });
+
+    html += `
+
+        </tbody>
+
+        <tfoot>
+
+            <tr>
+
+                <td><strong>TOTALES</strong></td>
+
+                <td>${totalCitas}</td>
+
+                <td>${totalVentas}</td>
+
+                <td>${totalAtencion}</td>
+
+            </tr>
+
+        </tfoot>
+
+    </table>
+
+    `;
+
+    document.getElementById("tablaReporte").innerHTML = html;
+
+}
+
+
+/*=========================================================
+  UTILIDADES
+=========================================================*/
+
+function mostrarLoading(mostrar){
+
+    document
+        .getElementById("loading")
+        .classList
+        .toggle("oculto", !mostrar);
+
+}
+
+
+function mostrarMensaje(texto,tipo){
+
+    const div = document.getElementById("mensaje");
+
+    div.innerHTML = texto;
+
+    div.className = "mensaje " + tipo;
+
+    setTimeout(function(){
+
+        div.className = "mensaje oculto";
+
+    },4000);
+
+}
+
+</script>
