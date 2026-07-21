@@ -310,14 +310,28 @@ function normalizarFechaDuplicado_(valor, zonaHoraria) {
 }
 
 function buscarCitasDuplicadas_(hoja, datosCita) {
-  const zonaHoraria = Session.getScriptTimeZone();
   const numero = normalizarNumeroDuplicado_(datosCita.numero);
-  const proceso = normalizarProcesoDuplicado_(datosCita.proceso);
-  const fecha = normalizarFechaDuplicado_(datosCita.fecha, zonaHoraria);
 
-  if (!numero || !proceso || !fecha || hoja.getLastRow() < 2) {
+  if (!numero || hoja.getLastRow() < 2) {
     return [];
   }
+
+  const mapa = obtenerMapaEncabezados_(hoja);
+  const encabezadosObligatorios = [
+    'ID',
+    'Cliente',
+    'Numero',
+    'Proceso',
+    'Fecha',
+    'SucursalOrigen',
+    'SucursalDestino',
+    'Asesor',
+    'ESTADO'
+  ];
+
+  encabezadosObligatorios.forEach(function(nombreEncabezado) {
+    obtenerColumnaObligatoria_(mapa, nombreEncabezado);
+  });
 
   const rango = hoja.getDataRange();
   const valores = rango.getValues();
@@ -326,23 +340,22 @@ function buscarCitasDuplicadas_(hoja, datosCita) {
 
   for (let i = 1; i < valores.length; i++) {
     const fila = valores[i];
+    const telefonoExistente = normalizarNumeroDuplicado_(
+      fila[mapa.Numero - 1]
+    );
 
-    if (
-      normalizarNumeroDuplicado_(fila[4]) === numero &&
-      normalizarProcesoDuplicado_(fila[3]) === proceso &&
-      normalizarFechaDuplicado_(fila[7], zonaHoraria) === fecha
-    ) {
+    if (telefonoExistente === numero) {
       const visible = mostrados[i];
       coincidencias.push({
-        id: visible[0] || '',
-        cliente: visible[2] || '',
-        numero: visible[4] || '',
-        proceso: visible[3] || '',
-        fecha: visible[7] || '',
-        sucursalOrigen: visible[12] || '',
-        sucursalDestino: visible[8] || '',
-        asesor: visible[9] || '',
-        estado: visible[13] || ''
+        id: visible[mapa.ID - 1] || '',
+        cliente: visible[mapa.Cliente - 1] || '',
+        numero: visible[mapa.Numero - 1] || '',
+        proceso: visible[mapa.Proceso - 1] || '',
+        fecha: visible[mapa.Fecha - 1] || '',
+        sucursalOrigen: visible[mapa.SucursalOrigen - 1] || '',
+        sucursalDestino: visible[mapa.SucursalDestino - 1] || '',
+        asesor: visible[mapa.Asesor - 1] || '',
+        estado: visible[mapa.ESTADO - 1] || ''
       });
     }
   }
