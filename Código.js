@@ -354,6 +354,8 @@ function guardarCita(datosCita) {
   const lock = LockService.getScriptLock();
 
   try {
+    lock.waitLock(30000);
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let hojaDestino = ss.getSheetByName('RegistroCitas');
     const hojaEstados = asegurarHojaEstados();
@@ -372,23 +374,65 @@ function guardarCita(datosCita) {
         'ESTADO', 'FECHA DE VENTA', 'HORA'
       ];
       hojaDestino.getRange(1, 1, 1, encabezados.length).setValues([encabezados]);
-      hojaDestino.getRange('A:A').setNumberFormat('@');
-      hojaDestino.getRange('N:N').setNumberFormat('@');
-      hojaDestino.getRange('O:O').setNumberFormat('@');
     }
 
-    // Aplicar validación a toda la columna N (desde fila 2 en adelante)
-    hojaDestino.getRange('N2:N').setDataValidation(reglaValidacion);
+    let mapa = obtenerMapaEncabezados_(hojaDestino);
+    const columnaID = obtenerColumnaObligatoria_(mapa, 'ID');
+    const columnaEstado = obtenerColumnaObligatoria_(mapa, 'ESTADO');
+    const columnaFechaVenta = obtenerColumnaObligatoria_(
+      mapa,
+      'FECHA DE VENTA'
+    );
 
-    lock.waitLock(30000);
+    const totalFilasHoja = hojaDestino.getMaxRows();
 
-    const encabezadosActuales = hojaDestino
-      .getRange(1, 1, 1, Math.max(hojaDestino.getLastColumn(), 15))
-      .getValues()[0];
+    hojaDestino
+      .getRange(1, columnaID, totalFilasHoja, 1)
+      .setNumberFormat('@');
 
-    if (encabezadosActuales.indexOf('HORA') === -1) {
-      hojaDestino.getRange(1, 16).setValue('HORA');
+    hojaDestino
+      .getRange(1, columnaEstado, totalFilasHoja, 1)
+      .setNumberFormat('@');
+
+    hojaDestino
+      .getRange(1, columnaFechaVenta, totalFilasHoja, 1)
+      .setNumberFormat('@');
+
+    // Aplicar validación a ESTADO desde la fila 2 en adelante.
+    hojaDestino
+      .getRange(2, columnaEstado, totalFilasHoja - 1, 1)
+      .setDataValidation(reglaValidacion);
+
+    if (!Object.prototype.hasOwnProperty.call(mapa, 'HORA')) {
+      hojaDestino
+        .getRange(1, hojaDestino.getLastColumn() + 1)
+        .setValue('HORA');
+
+      mapa = obtenerMapaEncabezados_(hojaDestino);
     }
+
+    const encabezadosObligatorios = [
+      'ID',
+      'Timestamp',
+      'Cliente',
+      'Proceso',
+      'Numero',
+      'Precio',
+      'Extras',
+      'Fecha',
+      'SucursalDestino',
+      'Asesor',
+      'Nota',
+      'Origen',
+      'SucursalOrigen',
+      'ESTADO',
+      'FECHA DE VENTA',
+      'HORA'
+    ];
+
+    encabezadosObligatorios.forEach(function(nombreEncabezado) {
+      obtenerColumnaObligatoria_(mapa, nombreEncabezado);
+    });
 
     if (datosCita.forzarDuplicado !== true) {
       const coincidencias = buscarCitasDuplicadas_(hojaDestino, datosCita);
@@ -407,7 +451,12 @@ function guardarCita(datosCita) {
     let ultimoID = 0;
     const ultimaFila = hojaDestino.getLastRow();
     if (ultimaFila >= 2) {
-      const idsRange = hojaDestino.getRange(2, 1, ultimaFila - 1, 1);
+      const idsRange = hojaDestino.getRange(
+        2,
+        mapa.ID,
+        ultimaFila - 1,
+        1
+      );
       const ids = idsRange.getValues().flat().filter(val => val && val.toString().trim() !== '');
       for (let id of ids) {
         let num = parseInt(id.toString(), 10);
@@ -418,28 +467,30 @@ function guardarCita(datosCita) {
     const idFormateado = String(nuevoID).padStart(4, "0");
 
     // Crear fila
-    const fila = [
-      idFormateado,
-      new Date(),
-      datosCita.cliente,
-      datosCita.proceso,
-      datosCita.numero,
-      datosCita.precio,
-      datosCita.extras || '',
-      datosCita.fecha,
-      datosCita.sucursalDestino,
-      datosCita.asesor,
-      datosCita.nota || '',
-      datosCita.origen,
-      datosCita.sucursalOrigen,
-      'EN ESPERA DE CITA',
-      '',
-      datosCita.hora || ''
-    ];
+    const fila = new Array(hojaDestino.getLastColumn()).fill('');
+
+    fila[mapa.ID - 1] = idFormateado;
+    fila[mapa.Timestamp - 1] = new Date();
+    fila[mapa.Cliente - 1] = datosCita.cliente;
+    fila[mapa.Proceso - 1] = datosCita.proceso;
+    fila[mapa.Numero - 1] = datosCita.numero;
+    fila[mapa.Precio - 1] = datosCita.precio;
+    fila[mapa.Extras - 1] = datosCita.extras || '';
+    fila[mapa.Fecha - 1] = datosCita.fecha;
+    fila[mapa.SucursalDestino - 1] = datosCita.sucursalDestino;
+    fila[mapa.Asesor - 1] = datosCita.asesor;
+    fila[mapa.Nota - 1] = datosCita.nota || '';
+    fila[mapa.Origen - 1] = datosCita.origen;
+    fila[mapa.SucursalOrigen - 1] = datosCita.sucursalOrigen;
+    fila[mapa.ESTADO - 1] = 'EN ESPERA DE CITA';
+    fila[mapa['FECHA DE VENTA'] - 1] = '';
+    fila[mapa.HORA - 1] = datosCita.hora || '';
 
     hojaDestino.appendRow(fila);
-    // Reaplicar validación por si la nueva fila no la heredó
-    hojaDestino.getRange('N2:N').setDataValidation(reglaValidacion);
+    // Reaplicar validación por si la nueva fila no la heredó.
+    hojaDestino
+      .getRange(2, mapa.ESTADO, hojaDestino.getMaxRows() - 1, 1)
+      .setDataValidation(reglaValidacion);
 
     return { exito: true, mensaje: 'Cita registrada correctamente', id: idFormateado };
   } catch (error) {
