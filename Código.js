@@ -451,33 +451,118 @@ function guardarCita(datosCita) {
   }
 }
 
+function obtenerMapaEncabezados_(hoja) {
+  const ultimaColumna = hoja.getLastColumn();
+
+  if (ultimaColumna < 1) {
+    return {};
+  }
+
+  const encabezados = hoja
+    .getRange(1, 1, 1, ultimaColumna)
+    .getDisplayValues()[0];
+
+  const mapa = {};
+
+  encabezados.forEach(function(valor, indice) {
+    const nombre = String(valor || '').trim();
+
+    if (!nombre) {
+      return;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(mapa, nombre)) {
+      throw new Error(
+        'Encabezado duplicado: ' + nombre
+      );
+    }
+
+    mapa[nombre] = indice + 1;
+  });
+
+  return mapa;
+}
+
+function obtenerColumnaObligatoria_(mapa, nombreEncabezado) {
+  if (!Object.prototype.hasOwnProperty.call(mapa, nombreEncabezado)) {
+    throw new Error(
+      'Falta la columna obligatoria: ' + nombreEncabezado
+    );
+  }
+
+  return mapa[nombreEncabezado];
+}
+
 // Trigger automático: cuando se edita la hoja, actualiza la fecha de venta si el estado cambia a "VENTA CERRADA"
 function onEdit(e) {
+  if (!e || !e.range || typeof e.range.getSheet !== 'function') {
+    return;
+  }
+
   const range = e.range;
   const sheet = range.getSheet();
-  if (sheet.getName() !== 'RegistroCitas') return;
 
-  const columnaEditada = range.getColumn();
-  const filaEditada = range.getRow();
-  if (filaEditada < 2) return;
-
-  // Si se editó la columna ESTADO (columna 14 = N)
-  if (columnaEditada === 14) {
-    const nuevoEstado = range.getValue();
-    const fechaVentaCell = sheet.getRange(filaEditada, 15); // columna O
-    if (nuevoEstado === 'VENTA CERRADA') {
-      const hoy = new Date();
-      const dd = String(hoy.getDate()).padStart(2, '0');
-      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-      const yyyy = hoy.getFullYear();
-      const fechaStr = `${dd}/${mm}/${yyyy}`;
-      fechaVentaCell.setValue(fechaStr);
-      fechaVentaCell.setNumberFormat('@');
-    } else {
-      // Si se cambia a otro estado, limpiamos la fecha de venta
-      fechaVentaCell.setValue('');
-    }
+  if (sheet.getName() !== 'RegistroCitas') {
+    return;
   }
+
+  const mapa = obtenerMapaEncabezados_(sheet);
+  const columnaEstado = obtenerColumnaObligatoria_(mapa, 'ESTADO');
+  const columnaFechaVenta = obtenerColumnaObligatoria_(
+    mapa,
+    'FECHA DE VENTA'
+  );
+
+  const primeraColumna = range.getColumn();
+  const ultimaColumna = primeraColumna + range.getNumColumns() - 1;
+
+  if (
+    columnaEstado < primeraColumna ||
+    columnaEstado > ultimaColumna
+  ) {
+    return;
+  }
+
+  const primeraFilaEditada = range.getRow();
+  const ultimaFilaEditada =
+    primeraFilaEditada + range.getNumRows() - 1;
+  const primeraFilaDatos = Math.max(2, primeraFilaEditada);
+
+  if (primeraFilaDatos > ultimaFilaEditada) {
+    return;
+  }
+
+  const valoresEditados = range.getValues();
+  const indiceEstadoEnRango = columnaEstado - primeraColumna;
+  const cantidadFilas = ultimaFilaEditada - primeraFilaDatos + 1;
+
+  const hoy = new Date();
+  const dd = String(hoy.getDate()).padStart(2, '0');
+  const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+  const yyyy = hoy.getFullYear();
+  const fechaStr = `${dd}/${mm}/${yyyy}`;
+
+  const fechasVenta = [];
+
+  for (let fila = primeraFilaDatos; fila <= ultimaFilaEditada; fila++) {
+    const indiceFilaEnRango = fila - primeraFilaEditada;
+    const nuevoEstado =
+      valoresEditados[indiceFilaEnRango][indiceEstadoEnRango];
+
+    fechasVenta.push([
+      nuevoEstado === 'VENTA CERRADA' ? fechaStr : ''
+    ]);
+  }
+
+  sheet
+    .getRange(
+      primeraFilaDatos,
+      columnaFechaVenta,
+      cantidadFilas,
+      1
+    )
+    .setNumberFormat('@')
+    .setValues(fechasVenta);
 }
 
 // Función auxiliar para aplicar la validación a filas existentes (ejecutar una sola vez si es necesario)
