@@ -592,6 +592,9 @@
     const input =
       document.getElementById('rcNumero');
 
+    const boton =
+      document.getElementById('rcBtnBuscar');
+
     const estado =
       document.getElementById('rcEstado');
 
@@ -600,6 +603,11 @@
 
     if (input) {
       input.value = '';
+    }
+
+    if (boton) {
+      boton.disabled = false;
+      boton.textContent = 'Buscar cita';
     }
 
     if (estado) {

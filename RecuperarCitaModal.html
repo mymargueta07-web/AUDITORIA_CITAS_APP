@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 22px;
+      background: #f2f5f9;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #1f3a4b;
+    }
+
+    .modal-contenido {
+      width: 100%;
+      max-width: 950px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="modal-contenido">
+    <?!= include('RecuperarCitaWeb'); ?>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (typeof rcLimpiarModulo === 'function') {
+        rcLimpiarModulo();
+      }
+
+      if (typeof rcInicializar === 'function') {
+        rcInicializar();
+      }
+
+      const input = document.getElementById('rcNumero');
+
+      if (input) {
+        input.focus();
+      }
+    });
+  </script>
+</body>
+
+</html>

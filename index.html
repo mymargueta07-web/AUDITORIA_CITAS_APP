@@ -1710,6 +1710,15 @@ function mostrarVistaApp(vista) {
     menuRecuperar.classList.add('activa');
 
     /*
+     * Limpia el componente cada vez que se entra en la vista.
+     */
+    if (
+      typeof rcLimpiarModulo === 'function'
+    ) {
+      rcLimpiarModulo();
+    }
+
+    /*
      * Activa los eventos del componente la primera vez.
      */
     if (

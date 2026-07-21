@@ -99,7 +99,7 @@ function abrirRegistroCitas() {
 function abrirRecuperarCita() {
 
   const html = HtmlService
-    .createTemplateFromFile("RecuperarCitaUI")
+    .createTemplateFromFile('RecuperarCitaModal')
     .evaluate()
     .setWidth(950)
     .setHeight(850);
