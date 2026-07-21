@@ -350,6 +350,7 @@
       margin: 10px 0;
       white-space: pre-wrap;
       font-size: 14px;
+      line-height: 1.45;
       border-left: 4px solid #2a7faa;
     }
 
@@ -1639,9 +1640,7 @@ SUCURSAL ORIGEN: ${datos.sucursalOrigen}`;
     const msgDiv = document.getElementById('mensaje');
 
     msgDiv.innerHTML = `
-      <div class="resumen-cita">
-        ${texto.replace(/\n/g, '<br>')}
-      </div>
+      <div class="resumen-cita"></div>
 
       <div class="acciones-resumen">
 
@@ -1664,6 +1663,10 @@ SUCURSAL ORIGEN: ${datos.sucursalOrigen}`;
 
     msgDiv.className = 'message success';
     msgDiv.style.display = 'block';
+
+    msgDiv
+      .querySelector('.resumen-cita')
+      .textContent = texto;
 
     document
       .getElementById('btnCopiarTexto')
