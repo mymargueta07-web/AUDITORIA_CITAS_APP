@@ -405,6 +405,37 @@
       margin-top: 5px;
     }
 
+    .hora-cita-selectores {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .hora-cita-opcional {
+      color: #6c757d;
+      font-size: 12px;
+      font-weight: 400;
+      margin-left: 6px;
+    }
+
+    .mensaje-error-campo {
+      display: none;
+      margin-top: 6px;
+      color: #b42318;
+      font-size: 12px;
+    }
+
+    @media(max-width: 480px) {
+      .hora-cita-selectores {
+        gap: 6px;
+      }
+
+      .hora-cita-selectores select {
+        padding-right: 6px;
+        padding-left: 8px;
+      }
+    }
+
     .loading {
       display: inline-block;
       width: 20px;
@@ -619,12 +650,56 @@
             </div>
           </div>
           <div class="form-group">
-            <label>Hora de la cita</label>
-            <input
-              type="text"
-              id="horaCita"
-              placeholder="Ejemplo: 02:30 PM"
-              inputmode="text">
+            <label>
+              Hora de la cita
+              <span class="hora-cita-opcional">Opcional</span>
+            </label>
+
+            <div class="hora-cita-selectores">
+              <select id="horaCitaHora" aria-label="Hora">
+                <option value="">Hora</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+              </select>
+
+              <select id="horaCitaMinuto" aria-label="Minutos">
+                <option value="">Minutos</option>
+                <option value="00">00</option>
+                <option value="05">05</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+                <option value="35">35</option>
+                <option value="40">40</option>
+                <option value="45">45</option>
+                <option value="50">50</option>
+                <option value="55">55</option>
+              </select>
+
+              <select id="horaCitaPeriodo" aria-label="AM o PM">
+                <option value="">AM/PM</option>
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+
+            <div
+              id="horaCitaError"
+              class="mensaje-error-campo"
+              role="alert">
+            </div>
           </div>
           <div class="form-group full-width">
 
@@ -718,6 +793,12 @@ let duplicadoPendiente = null;
     document.getElementById('origen').addEventListener('change', mostrarOtroOrigen);
     document.getElementById('citaAbierta').addEventListener('change', toggleFechaCita);
     document.getElementById('citaForm').addEventListener('submit', enviarFormulario);
+    ['horaCitaHora', 'horaCitaMinuto', 'horaCitaPeriodo']
+      .forEach(function(id) {
+        document
+          .getElementById(id)
+          .addEventListener('change', actualizarErrorHoraCita);
+      });
     if (typeof rcInicializar === 'function') {
   rcInicializar();
 }
@@ -968,19 +1049,67 @@ op.dataset.nombre.includes(texto)
       document.getElementById('otroOrigenText').required = false;
     }
   }
+
+  function obtenerHoraCitaFormulario() {
+    const hora = document.getElementById('horaCitaHora').value;
+    const minuto = document.getElementById('horaCitaMinuto').value;
+    const periodo = document.getElementById('horaCitaPeriodo').value;
+
+    if (!hora && !minuto && !periodo) {
+      return {
+        valida: true,
+        valor: ''
+      };
+    }
+
+    if (!hora || !minuto || !periodo) {
+      return {
+        valida: false,
+        mensaje: 'Complete la hora, minutos y AM/PM.'
+      };
+    }
+
+    return {
+      valida: true,
+      valor: hora.padStart(2, '0') + ':' + minuto + ' ' + periodo
+    };
+  }
+
+  function mostrarErrorHoraCita(mensaje) {
+    const error = document.getElementById('horaCitaError');
+    error.textContent = mensaje || '';
+    error.style.display = mensaje ? 'block' : 'none';
+  }
+
+  function actualizarErrorHoraCita() {
+    const resultado = obtenerHoraCitaFormulario();
+    mostrarErrorHoraCita(
+      resultado.valida ? '' : resultado.mensaje
+    );
+  }
   
   function toggleFechaCita() {
     const chk = document.getElementById('citaAbierta');
     const dateInput = document.getElementById('fechaCita');
-    const timeInput = document.getElementById('horaCita');
+    const selectoresHora = [
+      document.getElementById('horaCitaHora'),
+      document.getElementById('horaCitaMinuto'),
+      document.getElementById('horaCitaPeriodo')
+    ];
+
     if (chk.checked) {
       dateInput.disabled = true;
       dateInput.value = '';
-      timeInput.disabled = true;
-      timeInput.value = '';
+      selectoresHora.forEach(function(selector) {
+        selector.value = '';
+        selector.disabled = true;
+      });
+      mostrarErrorHoraCita('');
     } else {
       dateInput.disabled = false;
-      timeInput.disabled = false;
+      selectoresHora.forEach(function(selector) {
+        selector.disabled = false;
+      });
     }
   }
   
@@ -1047,35 +1176,18 @@ op.dataset.nombre.includes(texto)
   const fechaInput =
     document.getElementById('fechaCita').value;
 
-  const horaInput =
-    document.getElementById('horaCita').value.trim().toUpperCase();
+  const resultadoHora = obtenerHoraCitaFormulario();
 
-  let horaNormalizada = '';
-
-  if (horaInput) {
-    const partesHora = horaInput.match(
-      /^(0?[1-9]|1[0-2]):([0-5]\d)\s*(AM|PM)$/
-    );
-
-    if (!partesHora) {
-      mostrarMensaje(
-        'Ingrese la hora en formato de 12 horas, por ejemplo: 02:30 PM',
-        'error'
-      );
-      return;
-    }
-
-    horaNormalizada =
-      partesHora[1].padStart(2, '0') +
-      ':' + partesHora[2] +
-      ' ' + partesHora[3];
+  if (!resultadoHora.valida) {
+    mostrarErrorHoraCita(resultadoHora.mensaje);
+    return;
   }
 
   const horaParaGuardar =
-    horaNormalizada;
+    resultadoHora.valor;
 
   const horaParaResumen =
-    horaNormalizada || 'No especificada';
+    horaParaGuardar || 'No especificada';
 
 
   // =====================================================
@@ -1630,8 +1742,13 @@ guardadoEnCurso = false;
     // Reiniciar fecha
     document.getElementById('citaAbierta').checked = false;
     document.getElementById('fechaCita').disabled = false;
-    document.getElementById('horaCita').value = '';
-    document.getElementById('horaCita').disabled = false;
+    ['horaCitaHora', 'horaCitaMinuto', 'horaCitaPeriodo']
+      .forEach(function(id) {
+        const selector = document.getElementById(id);
+        selector.value = '';
+        selector.disabled = false;
+      });
+    mostrarErrorHoraCita('');
 
     // Ocultar resumen anterior
     const mensaje = document.getElementById('mensaje');
@@ -1674,10 +1791,6 @@ btnGuardar.innerText = '✅ Guardar cita';
     msgDiv.innerHTML = texto;
     msgDiv.className = `message ${tipo}`;
     msgDiv.style.display = 'block';
-    window.scrollTo({
-  top: 0,
-  behavior: "smooth"
-});
     setTimeout(() => {
       msgDiv.style.display = 'none';
       if (tipo === 'success') msgDiv.innerHTML = '';
