@@ -1624,18 +1624,25 @@ fechaFinal = `${dia}/${mes}/${anio}`;
 
     const cabecera = `CITA AGENDADA - ${id}`;
 
-    const texto = `${cabecera}
-CLIENTE: ${datos.cliente}
-PROCESO: ${datos.proceso}
-PRECIO: ${datos.precio}
-EXTRAS: ${datos.extras || 'Ninguno'}
-FECHA: ${datos.fecha}
-HORA: ${hora}
-SUCURSAL: ${datos.sucursalDestino}
-ASESOR: ${datos.asesor}
-NOTA: ${datos.nota || 'Ninguna'}
-ORIGEN: ${datos.origen}
-SUCURSAL ORIGEN: ${datos.sucursalOrigen}`;
+    const texto = [
+      cabecera,
+      `CLIENTE: ${datos.cliente}`,
+      `PROCESO: ${datos.proceso}`,
+      `PRECIO: ${datos.precio}`,
+      `EXTRAS: ${datos.extras || 'Ninguno'}`,
+      `FECHA: ${datos.fecha}`,
+      `HORA: ${hora || 'No especificada'}`,
+      `SUCURSAL: ${datos.sucursalDestino}`,
+      `ASESOR: ${datos.asesor}`,
+      `NOTA: ${datos.nota || 'Ninguna'}`,
+      `ORIGEN: ${datos.origen}`,
+      `SUCURSAL ORIGEN: ${datos.sucursalOrigen}`
+    ].join('\n');
+
+    const textoCompacto = String(texto || '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\n[ \t]*\n+/g, '\n')
+      .trim();
 
     const msgDiv = document.getElementById('mensaje');
 
@@ -1666,7 +1673,7 @@ SUCURSAL ORIGEN: ${datos.sucursalOrigen}`;
 
     msgDiv
       .querySelector('.resumen-cita')
-      .textContent = texto;
+      .textContent = textoCompacto;
 
     document
       .getElementById('btnCopiarTexto')
@@ -1675,7 +1682,7 @@ SUCURSAL ORIGEN: ${datos.sucursalOrigen}`;
         event.preventDefault();
         event.stopPropagation();
 
-        copiarTexto(texto);
+        copiarTexto(textoCompacto);
 
       });
 
