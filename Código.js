@@ -634,11 +634,28 @@ function aplicarValidacionAEstado() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const hoja = ss.getSheetByName('RegistroCitas');
   if (!hoja) return;
+
+  const mapa = obtenerMapaEncabezados_(hoja);
+  const columnaEstado =
+    obtenerColumnaObligatoria_(mapa, 'ESTADO');
+
   const hojaEstados = asegurarHojaEstados();
   const rangoEstados = hojaEstados.getRange('A1:A' + hojaEstados.getLastRow());
   const regla = SpreadsheetApp.newDataValidation()
     .requireValueInRange(rangoEstados, true)
     .setAllowInvalid(false)
     .build();
-  hoja.getRange('N2:N').setDataValidation(regla);
+
+  if (hoja.getMaxRows() < 2) {
+    hoja.insertRowsAfter(hoja.getMaxRows(), 1);
+  }
+
+  hoja
+    .getRange(
+      2,
+      columnaEstado,
+      hoja.getMaxRows() - 1,
+      1
+    )
+    .setDataValidation(regla);
 }
