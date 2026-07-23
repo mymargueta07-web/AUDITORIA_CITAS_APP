@@ -33,6 +33,35 @@ function obtenerReporteDiario(fechaSeleccionada) {
 
   }
 
+  const mapaCitas =
+    obtenerMapaEncabezados_(shCitas);
+
+  [
+    "Timestamp",
+    "SucursalOrigen",
+    "ESTADO",
+    "FECHA DE VENTA"
+  ].forEach(function(nombreEncabezado) {
+    obtenerColumnaObligatoria_(
+      mapaCitas,
+      nombreEncabezado
+    );
+  });
+
+  const mapaAtencion =
+    obtenerMapaEncabezados_(shAtencion);
+
+  [
+    "SucursalOrigen",
+    "ESTADO",
+    "FECHA DE VENTA"
+  ].forEach(function(nombreEncabezado) {
+    obtenerColumnaObligatoria_(
+      mapaAtencion,
+      nombreEncabezado
+    );
+  });
+
   const citas =
     shCitas.getDataRange().getValues();
 
@@ -147,20 +176,22 @@ function obtenerReporteDiario(fechaSeleccionada) {
       citas[i];
 
     const timestamp =
-      fila[1]; // B
+      fila[mapaCitas.Timestamp - 1];
 
     const sucursal =
       normalizarSucursalReporte_(
-        fila[12]
-      ); // M
+        fila[mapaCitas.SucursalOrigen - 1]
+      );
 
     const estado =
-      String(fila[13] || "")
+      String(
+        fila[mapaCitas.ESTADO - 1] || ""
+      )
         .trim()
-        .toUpperCase(); // N
+        .toUpperCase();
 
     const fechaVenta =
-      fila[14]; // O
+      fila[mapaCitas["FECHA DE VENTA"] - 1];
 
 
     if (!reporte[sucursal]) {
@@ -212,16 +243,18 @@ function obtenerReporteDiario(fechaSeleccionada) {
 
     const sucursal =
       normalizarSucursalReporte_(
-        fila[8]
-      ); // I
+        fila[mapaAtencion.SucursalOrigen - 1]
+      );
 
     const estado =
-      String(fila[9] || "")
+      String(
+        fila[mapaAtencion.ESTADO - 1] || ""
+      )
         .trim()
-        .toUpperCase(); // J
+        .toUpperCase();
 
     const fechaVenta =
-      fila[10]; // K
+      fila[mapaAtencion["FECHA DE VENTA"] - 1];
 
 
     if (!reporte[sucursal]) {
