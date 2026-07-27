@@ -322,6 +322,13 @@ function asegurarHojaEstados() {
 function obtenerAsesoresPorSucursal(sucursal) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const hojaAsesores = ss.getSheetByName('Asesores');
+
+  if (!hojaAsesores) {
+    throw new Error(
+      'No se encuentra la hoja "Asesores"'
+    );
+  }
+
   const mapaAsesores =
     obtenerMapaEncabezados_(hojaAsesores);
 
