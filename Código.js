@@ -33,6 +33,19 @@ function obtenerDatosIniciales() {
       throw new Error('No se encuentra la hoja "Asesores"');
     }
 
+    const mapaAsesores =
+      obtenerMapaEncabezados_(hojaAsesores);
+
+    [
+      'Sucursal',
+      'Activo'
+    ].forEach(function(nombreEncabezado) {
+      obtenerColumnaObligatoria_(
+        mapaAsesores,
+        nombreEncabezado
+      );
+    });
+
     const datosAsesores = hojaAsesores
       .getDataRange()
       .getDisplayValues();
@@ -41,7 +54,9 @@ function obtenerDatosIniciales() {
 
     const asesoresActivos = datosAsesores.filter(row => {
 
-      const estado = (row[2] || '')
+      const estado = (
+        row[mapaAsesores.Activo - 1] || ''
+      )
         .toString()
         .trim()
         .toUpperCase();
@@ -53,7 +68,9 @@ function obtenerDatosIniciales() {
     const sucursalesOrigen = [
       ...new Set(
         asesoresActivos
-          .map(row => (row[1] || '').toString().trim())
+          .map(row => (
+            row[mapaAsesores.Sucursal - 1] || ''
+          ).toString().trim())
           .filter(Boolean)
       )
     ].sort();
@@ -271,11 +288,30 @@ function asegurarHojaEstados() {
 function obtenerAsesoresPorSucursal(sucursal) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const hojaAsesores = ss.getSheetByName('Asesores');
+  const mapaAsesores =
+    obtenerMapaEncabezados_(hojaAsesores);
+
+  [
+    'Asesor',
+    'Sucursal',
+    'Activo'
+  ].forEach(function(nombreEncabezado) {
+    obtenerColumnaObligatoria_(
+      mapaAsesores,
+      nombreEncabezado
+    );
+  });
+
   const datos = hojaAsesores.getDataRange().getValues();
   datos.shift();
   const asesores = datos
-    .filter(row => row[1] === sucursal && row[2] === 'SÍ')
-    .map(row => row[0])
+    .filter(row =>
+      row[mapaAsesores.Sucursal - 1] === sucursal &&
+      row[mapaAsesores.Activo - 1] === 'SÍ'
+    )
+    .map(function(row) {
+      return row[mapaAsesores.Asesor - 1];
+    })
     .sort();
   return asesores;
 }
