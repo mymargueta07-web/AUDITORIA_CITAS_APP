@@ -262,6 +262,26 @@ function obtenerRegistrosCitasAbiertas_(sucursalSeleccionada, fechaDesde, fechaH
     throw new Error("No existe la hoja: " + HOJA_REGISTRO_CITAS);
   }
 
+  const mapa =
+    obtenerMapaEncabezados_(hoja);
+
+  [
+    'ID',
+    'Timestamp',
+    'Cliente',
+    'Proceso',
+    'Numero',
+    'Fecha',
+    'Asesor',
+    'SucursalOrigen',
+    'ESTADO'
+  ].forEach(function(nombreEncabezado) {
+    obtenerColumnaObligatoria_(
+      mapa,
+      nombreEncabezado
+    );
+  });
+
   const datos = hoja.getDataRange().getValues();
 
   if (datos.length <= 1) {
@@ -283,15 +303,15 @@ function obtenerRegistrosCitasAbiertas_(sucursalSeleccionada, fechaDesde, fechaH
 
     const fila = datos[i];
 
-    const id = fila[0];            // A  ID
-    const timestamp = fila[1];     // B  Timestamp
-    const cliente = fila[2];       // C  Cliente
-    const proceso = fila[3];       // D  Proceso
-    const numero = fila[4];        // E  Numero
-    const fechaCita = fila[7];     // H  Fecha
-    const asesor = fila[9];        // J  Asesor
-    let sucursal = fila[12];       // M  SucursalOrigen
-    const estado = fila[13];       // N  ESTADO
+    const id = fila[mapa.ID - 1];
+    const timestamp = fila[mapa.Timestamp - 1];
+    const cliente = fila[mapa.Cliente - 1];
+    const proceso = fila[mapa.Proceso - 1];
+    const numero = fila[mapa.Numero - 1];
+    const fechaCita = fila[mapa.Fecha - 1];
+    const asesor = fila[mapa.Asesor - 1];
+    let sucursal = fila[mapa.SucursalOrigen - 1];
+    const estado = fila[mapa.ESTADO - 1];
 
     sucursal = normalizarSucursalCitasAbiertas_(sucursal);
 
