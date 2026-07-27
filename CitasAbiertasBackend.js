@@ -216,6 +216,15 @@ function obtenerSucursalesCitasAbiertas_() {
     throw new Error('No existe la hoja "' + HOJA_SUCURSALES_CITAS_ABIERTAS + '".');
   }
 
+  const mapa =
+    obtenerMapaEncabezados_(hoja);
+
+  const columnaSucursal =
+    obtenerColumnaObligatoria_(
+      mapa,
+      'Sucursal'
+    );
+
   const datos = hoja.getDataRange().getValues();
 
   if (datos.length <= 1) {
@@ -225,7 +234,7 @@ function obtenerSucursalesCitasAbiertas_() {
   const lista = [];
 
   for (let i = 1; i < datos.length; i++) {
-    const nombre = String(datos[i][0] || "").trim(); // Columna A
+    const nombre = String(datos[i][columnaSucursal - 1] || "").trim();
     if (!nombre) continue;
 
     const normalizada = normalizarSucursalCitasAbiertas_(nombre);
