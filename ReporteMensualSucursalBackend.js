@@ -157,6 +157,20 @@ function obtenerRegistrosReporteMensualSucursal_(sucursalSeleccionada, mes, anio
     throw new Error("No existe la hoja: " + RMS_HOJA_REGISTRO_CITAS);
   }
 
+  const mapa =
+    obtenerMapaEncabezados_(hoja);
+
+  [
+    'Timestamp',
+    'Asesor',
+    'SucursalOrigen'
+  ].forEach(function(nombreEncabezado) {
+    obtenerColumnaObligatoria_(
+      mapa,
+      nombreEncabezado
+    );
+  });
+
   const datos = hoja.getDataRange().getValues();
 
   if (datos.length <= 1) {
@@ -168,9 +182,9 @@ function obtenerRegistrosReporteMensualSucursal_(sucursalSeleccionada, mes, anio
   for (let i = 1; i < datos.length; i++) {
     const fila = datos[i];
 
-    const timestamp = fila[1];   // B Timestamp
-    const asesor = fila[9];      // J Asesor
-    let sucursal = fila[12];     // M SucursalOrigen
+    const timestamp = fila[mapa.Timestamp - 1];
+    const asesor = fila[mapa.Asesor - 1];
+    let sucursal = fila[mapa.SucursalOrigen - 1];
 
     sucursal = normalizarSucursalRMS_(sucursal);
 
