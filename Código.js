@@ -158,20 +158,37 @@ function obtenerDatosIniciales() {
       throw new Error('No se encuentra la hoja "Procesos"');
     }
 
-    let procesos = hojaProcesos
-      .getDataRange()
-      .getDisplayValues()
-      .flat()
-      .map(valor => valor.toString().trim())
-      .filter(Boolean);
+    const mapaProcesos =
+      obtenerMapaEncabezados_(hojaProcesos);
 
-    if (
-      procesos.length > 0 &&
-      procesos[0].toLowerCase() === 'proceso'
-    ) {
+    const columnaProceso =
+      obtenerColumnaObligatoria_(
+        mapaProcesos,
+        'Proceso'
+      );
 
-      procesos.shift();
+    const ultimaFilaProcesos =
+      hojaProcesos.getLastRow();
 
+    let procesos = [];
+
+    if (ultimaFilaProcesos >= 2) {
+      procesos =
+        hojaProcesos
+          .getRange(
+            2,
+            columnaProceso,
+            ultimaFilaProcesos - 1,
+            1
+          )
+          .getDisplayValues()
+          .flat()
+          .map(function(valor) {
+            return String(valor || '').trim();
+          })
+          .filter(function(valor) {
+            return valor !== '';
+          });
     }
 
     procesos = [
@@ -193,20 +210,37 @@ function obtenerDatosIniciales() {
       throw new Error('No se encuentra la hoja "Origenes"');
     }
 
-    let origenes = hojaOrigenes
-      .getDataRange()
-      .getDisplayValues()
-      .flat()
-      .map(valor => valor.toString().trim())
-      .filter(Boolean);
+    const mapaOrigenes =
+      obtenerMapaEncabezados_(hojaOrigenes);
 
-    if (
-      origenes.length > 0 &&
-      origenes[0].toLowerCase() === 'origen'
-    ) {
+    const columnaOrigen =
+      obtenerColumnaObligatoria_(
+        mapaOrigenes,
+        'Origen'
+      );
 
-      origenes.shift();
+    const ultimaFilaOrigenes =
+      hojaOrigenes.getLastRow();
 
+    let origenes = [];
+
+    if (ultimaFilaOrigenes >= 2) {
+      origenes =
+        hojaOrigenes
+          .getRange(
+            2,
+            columnaOrigen,
+            ultimaFilaOrigenes - 1,
+            1
+          )
+          .getDisplayValues()
+          .flat()
+          .map(function(valor) {
+            return String(valor || '').trim();
+          })
+          .filter(function(valor) {
+            return valor !== '';
+          });
     }
 
     origenes = [
