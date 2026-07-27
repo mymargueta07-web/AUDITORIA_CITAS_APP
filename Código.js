@@ -69,20 +69,37 @@ function obtenerDatosIniciales() {
       throw new Error('No se encuentra la hoja "Sucursales"');
     }
 
-    let sucursalesDestino = hojaSucursales
-      .getDataRange()
-      .getDisplayValues()
-      .flat()
-      .map(valor => valor.toString().trim())
-      .filter(Boolean);
+    const mapaSucursales =
+      obtenerMapaEncabezados_(hojaSucursales);
 
-    if (
-      sucursalesDestino.length > 0 &&
-      sucursalesDestino[0].toLowerCase() === 'sucursal'
-    ) {
+    const columnaSucursal =
+      obtenerColumnaObligatoria_(
+        mapaSucursales,
+        'Sucursal'
+      );
 
-      sucursalesDestino.shift();
+    const ultimaFilaSucursales =
+      hojaSucursales.getLastRow();
 
+    let sucursalesDestino = [];
+
+    if (ultimaFilaSucursales >= 2) {
+      sucursalesDestino =
+        hojaSucursales
+          .getRange(
+            2,
+            columnaSucursal,
+            ultimaFilaSucursales - 1,
+            1
+          )
+          .getDisplayValues()
+          .flat()
+          .map(function(valor) {
+            return String(valor || '').trim();
+          })
+          .filter(function(valor) {
+            return valor !== '';
+          });
     }
 
     sucursalesDestino = [
