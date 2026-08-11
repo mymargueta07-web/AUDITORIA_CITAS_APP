@@ -492,7 +492,7 @@ function imprimirResumen(resumen) {
   console.log('FILAS SIMULADAS CITA_DESTINOS:', resumen.filas_simuladas_cita_destinos);
 }
 
-function ejecutar(rutaEntrada) {
+function ejecutar(rutaEntrada, opciones) {
   const contenido = JSON.parse(fs.readFileSync(rutaEntrada, 'utf8'));
   const catalogos = cargarCatalogosLocales();
   const reporte = {
@@ -624,10 +624,16 @@ function ejecutar(rutaEntrada) {
 
   fs.mkdirSync(path.dirname(RUTA_REPORTE), { recursive: true });
   fs.writeFileSync(RUTA_REPORTE, JSON.stringify(reporte, null, 2) + '\n', 'utf8');
-  imprimirResumen(reporte.resumen);
-  console.log('REPORTE:', RUTA_REPORTE);
+  if (!opciones || opciones.silencioso !== true) {
+    imprimirResumen(reporte.resumen);
+    console.log('REPORTE:', RUTA_REPORTE);
+  }
 
-  return reporte.resumen.con_errores === 0 ? 0 : 1;
+  return {
+    codigo: reporte.resumen.con_errores === 0 ? 0 : 1,
+    reporte: reporte,
+    resultados: resultados
+  };
 }
 
 function principal() {
@@ -639,11 +645,21 @@ function principal() {
   }
 
   try {
-    return ejecutar(rutaEntrada);
+    return ejecutar(rutaEntrada).codigo;
   } catch (error) {
     console.error('ERROR DE VALIDACIÓN:', error.message);
     return 1;
   }
 }
 
-process.exitCode = principal();
+if (require.main === module) {
+  process.exitCode = principal();
+}
+
+module.exports = {
+  SOURCE_SYSTEM: SOURCE_SYSTEM,
+  cargarCatalogosLocales: cargarCatalogosLocales,
+  ejecutar: ejecutar,
+  resolverCatalogo: resolverCatalogo,
+  resolverSucursalOrigen: resolverSucursalOrigen
+};

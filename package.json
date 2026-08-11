@@ -1,0 +1,9 @@
+{
+  "name": "auditoria-citas-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Herramientas locales para validar e importar RegistroCitas.",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.0"
+  }
+}

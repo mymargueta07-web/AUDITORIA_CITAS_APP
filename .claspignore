@@ -5,6 +5,7 @@
 **/node_modules/**
 **/*.md
 **/*.json
+**/datos_prueba/**
 
 # Manifiesto requerido por el proyecto de Apps Script.
 !appsscript.json

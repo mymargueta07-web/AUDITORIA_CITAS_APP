@@ -1,2 +1,4 @@
 supabase/datos_prueba/
+node_modules/
 reportes/validacion_importacion_citas.json
+reportes/importacion_citas_ultimo.json
