@@ -52,19 +52,41 @@ function probarExportacionRegistroCitasSupabase() {
     );
   }
 
-  Logger.log(
-    'PRUEBA PRECIO MÚLTIPLE:\n' +
-    JSON.stringify(
-      {
-        precio_texto: '$350  $450',
-        precio_monto:
-          pruebaPrecioMultiple.monto,
-        advertencia:
-          'El precio contiene múltiples montos y requiere revisión'
-      },
+  const pruebasHora = [
+    { entrada: '8:30 AM', esperada: '08:30:00', error: false },
+    { entrada: '2:15 PM', esperada: '14:15:00', error: false },
+    { entrada: '14:45', esperada: '14:45:00', error: false },
+    { entrada: '14:45:30', esperada: '14:45:30', error: false },
+    { entrada: '12:00 AM', esperada: '00:00:00', error: false },
+    { entrada: '12:00 PM', esperada: '12:00:00', error: false },
+    { entrada: '25:00', esperada: null, error: true }
+  ];
+  const resultadosHora = pruebasHora.map(function(prueba) {
+    const resultadoHora = interpretarHoraHojaSupabase_(
       null,
-      2
-    )
+      prueba.entrada,
+      Session.getScriptTimeZone()
+    );
+
+    if (
+      resultadoHora.valor !== prueba.esperada ||
+      resultadoHora.error !== prueba.error
+    ) {
+      throw new Error(
+        'Falló la prueba de hora para: ' + prueba.entrada
+      );
+    }
+
+    return {
+      entrada: prueba.entrada,
+      hora_cita: resultadoHora.valor,
+      error: resultadoHora.error
+    };
+  });
+
+  Logger.log(
+    'PRUEBA PARSER HORA:\n' +
+    JSON.stringify(resultadosHora, null, 2)
   );
 
   const resultado =
@@ -83,7 +105,25 @@ function probarExportacionRegistroCitasSupabase() {
   );
   Logger.log(
     'REGISTROS DE PRUEBA:\n' +
-    JSON.stringify(resultado.registros, null, 2)
+    JSON.stringify(
+      resultado.registros.map(function(registro) {
+        return {
+          id_legacy: registro.id_legacy,
+          fecha_cita: registro.fecha_cita,
+          hora_cita: registro.hora_cita,
+          sucursal_destino_texto:
+            registro.sucursal_destino_texto,
+          destinos_candidatos:
+            registro.destinos_candidatos,
+          numero_original: registro.numero_original,
+          numero_normalizado:
+            registro.numero_normalizado,
+          advertencias: registro.advertencias
+        };
+      }),
+      null,
+      2
+    )
   );
 
   return resultado;
@@ -149,7 +189,7 @@ function prepararExportacionRegistroCitasSupabase_(opciones) {
     spreadsheet_id: ss.getId(),
     hoja: 'RegistroCitas',
     zona_horaria: zonaHoraria,
-    version_exportador: '1.0'
+    version_exportador: '1.1'
   };
   const resumen =
     crearResumenRegistroCitasSupabase_();
@@ -281,13 +321,18 @@ function construirRegistroCitaSupabase_(contexto) {
   const texto = function(nombre) {
     return visible(nombre).trim();
   };
+  const tieneEncabezado = function(nombre) {
+    return Object.prototype.hasOwnProperty.call(mapa, nombre);
+  };
 
   const idLegacy = texto('ID');
   const cliente = texto('Cliente');
   const proceso = texto('Proceso');
   const numeroOriginal = visible('Numero');
   const numeroNormalizado =
-    numeroOriginal.replace(/\D/g, '');
+    normalizarTelefonoDiagnosticoSupabase_(
+      numeroOriginal
+    );
   const precioTexto = visible('Precio');
   const extras = texto('Extras');
   const fechaVisible = texto('Fecha');
@@ -304,6 +349,10 @@ function construirRegistroCitaSupabase_(contexto) {
       .toUpperCase();
   const fechaVentaVisible =
     texto('FECHA DE VENTA');
+  const horaVisible =
+    tieneEncabezado('HORA')
+      ? visible('HORA')
+      : '';
   const esCitaAbierta =
     fechaVisible
       .replace(/\s+/g, ' ')
@@ -372,6 +421,34 @@ function construirRegistroCitaSupabase_(contexto) {
     resumen.fechas_invalidas++;
   }
 
+  let horaCita = null;
+
+  if (!esCitaAbierta && horaVisible.trim()) {
+    const horaResultado = interpretarHoraHojaSupabase_(
+      tieneEncabezado('HORA')
+        ? valorReal('HORA')
+        : null,
+      horaVisible,
+      contexto.zonaHoraria
+    );
+
+    horaCita = horaResultado.valor;
+
+    if (horaResultado.error) {
+      resumen.horas_invalidas++;
+      advertencias.push(
+        'Hora de cita inválida: ' +
+        horaResultado.original
+      );
+    }
+  }
+
+  if (horaCita) {
+    resumen.citas_con_hora++;
+  } else {
+    resumen.citas_sin_hora++;
+  }
+
   const precioResultado =
     interpretarPrecioSupabase_(precioTexto);
 
@@ -383,20 +460,17 @@ function construirRegistroCitaSupabase_(contexto) {
   } else if (!precioResultado.valido) {
     resumen.precios_invalidos++;
 
-    if (!precioTexto.trim()) {
-      errores.push('Precio vacío.');
-    } else {
-      advertencias.push(
-        'Precio no convertible a monto: ' +
-        precioTexto
-      );
-    }
+    advertencias.push(
+      precioTexto.trim()
+        ? 'Precio no convertible a monto: ' + precioTexto
+        : 'Precio vacío.'
+    );
   }
 
   if (!numeroNormalizado) {
     resumen.telefonos_vacios++;
     advertencias.push(
-      'El teléfono no contiene dígitos.'
+      'El teléfono no contiene dígitos normalizables.'
     );
   }
 
@@ -452,14 +526,25 @@ function construirRegistroCitaSupabase_(contexto) {
     );
   }
 
+  const destinosCandidatos =
+    extraerDestinosCandidatosSupabase_(
+      sucursalDestino
+    );
+
+  if (destinosCandidatos.length > 1) {
+    resumen.destinos_multiples++;
+  }
+
   const destinosNoReconocidos =
     obtenerDestinosNoReconocidosSupabase_(
-      sucursalDestino,
+      destinosCandidatos,
       contexto.catalogos.sucursales
     );
 
   if (destinosNoReconocidos.length > 0) {
     resumen.sucursales_destino_no_reconocidas++;
+    resumen.destinos_candidatos_no_reconocidos +=
+      destinosNoReconocidos.length;
     advertencias.push(
       'Sucursales destino no reconocidas: ' +
       destinosNoReconocidos.join(', ')
@@ -512,8 +597,10 @@ function construirRegistroCitaSupabase_(contexto) {
       esCitaAbierta
         ? null
         : fechaCitaResultado.valor,
+    hora_cita: horaCita,
     sucursal_destino_texto:
       sucursalDestino,
+    destinos_candidatos: destinosCandidatos,
     asesor_texto: asesor,
     nota: nota || null,
     origen_texto: origen,
@@ -642,6 +729,98 @@ function interpretarFechaHojaSupabase_(
       original: original
     };
   }
+}
+
+/**
+ * Interpreta una hora local de Google Sheets sin convertirla a UTC.
+ *
+ * @param {*} valor Valor devuelto por getValues().
+ * @param {string} visible Valor devuelto por getDisplayValues().
+ * @param {string} zonaHoraria Zona horaria del proyecto.
+ * @return {Object} Hora HH:mm:ss o error de interpretación.
+ */
+function interpretarHoraHojaSupabase_(
+  valor,
+  visible,
+  zonaHoraria
+) {
+  const original = String(visible || '').trim();
+
+  if (
+    Object.prototype.toString.call(valor) === '[object Date]' &&
+    !isNaN(valor.getTime())
+  ) {
+    return {
+      valor: Utilities.formatDate(
+        valor,
+        zonaHoraria,
+        'HH:mm:ss'
+      ),
+      error: false,
+      original: original
+    };
+  }
+
+  const coincidencia = original.match(
+    /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i
+  );
+
+  if (!coincidencia) {
+    return {
+      valor: null,
+      error: true,
+      original: original
+    };
+  }
+
+  let hora = Number(coincidencia[1]);
+  const minuto = Number(coincidencia[2]);
+  const segundo = Number(coincidencia[3] || 0);
+  const meridiano =
+    String(coincidencia[4] || '').toUpperCase();
+
+  if (minuto > 59 || segundo > 59) {
+    return {
+      valor: null,
+      error: true,
+      original: original
+    };
+  }
+
+  if (meridiano) {
+    if (hora < 1 || hora > 12) {
+      return {
+        valor: null,
+        error: true,
+        original: original
+      };
+    }
+
+    if (hora === 12) {
+      hora = 0;
+    }
+
+    if (meridiano === 'PM') {
+      hora += 12;
+    }
+  } else if (hora > 23) {
+    return {
+      valor: null,
+      error: true,
+      original: original
+    };
+  }
+
+  return {
+    valor:
+      String(hora).padStart(2, '0') +
+      ':' +
+      String(minuto).padStart(2, '0') +
+      ':' +
+      String(segundo).padStart(2, '0'),
+    error: false,
+    original: original
+  };
 }
 
 /**
@@ -850,6 +1029,23 @@ function interpretarPrecioSupabase_(texto) {
 }
 
 /**
+ * Normaliza teléfonos solo para diagnóstico de la exportación. Supabase
+ * recalcula este campo al insertar la cita.
+ *
+ * @param {string} numero Valor original de Sheets.
+ * @return {?string} Dígitos, o null si no representa un teléfono utilizable.
+ */
+function normalizarTelefonoDiagnosticoSupabase_(numero) {
+  const digitos = String(numero || '').replace(/\D/g, '');
+
+  if (!digitos || /^0+$/.test(digitos)) {
+    return null;
+  }
+
+  return digitos;
+}
+
+/**
  * Carga catálogos para producir advertencias, no para excluir citas.
  *
  * @param {Spreadsheet} ss Spreadsheet activo.
@@ -1011,28 +1207,43 @@ function obtenerHojaCatalogoRegistroSupabase_(
 }
 
 /**
- * Detecta destinos separados por coma que no están en el catálogo.
+ * Separa destinos legados por coma sin alterar sus nombres originales.
  *
  * @param {string} texto Destinos legados.
- * @param {Set} sucursales Catálogo reconocido.
- * @return {Array<string>} Destinos desconocidos.
+ * @return {Array<string>} Destinos únicos, en el orden recibido.
  */
-function obtenerDestinosNoReconocidosSupabase_(
-  texto,
-  sucursales
-) {
-  if (!texto) {
-    return [];
-  }
+function extraerDestinosCandidatosSupabase_(texto) {
+  const vistos = new Set();
 
-  return texto
+  return String(texto || '')
     .split(',')
     .map(function(valor) {
       return valor.trim();
     })
     .filter(function(valor) {
-      return valor && !sucursales.has(valor);
+      if (!valor || vistos.has(valor)) {
+        return false;
+      }
+
+      vistos.add(valor);
+      return true;
     });
+}
+
+/**
+ * Detecta destinos candidatos que no están en el catálogo.
+ *
+ * @param {Array<string>} destinos Destinos ya separados.
+ * @param {Set} sucursales Catálogo reconocido.
+ * @return {Array<string>} Destinos desconocidos.
+ */
+function obtenerDestinosNoReconocidosSupabase_(
+  destinos,
+  sucursales
+) {
+  return destinos.filter(function(destino) {
+    return !sucursales.has(destino);
+  });
 }
 
 /**
@@ -1134,11 +1345,16 @@ function crearResumenRegistroCitasSupabase_() {
     ventas_cerradas: 0,
     telefonos_vacios: 0,
     fechas_invalidas: 0,
+    horas_invalidas: 0,
+    citas_con_hora: 0,
+    citas_sin_hora: 0,
     precios_invalidos: 0,
     precios_multiples: 0,
     estados_no_reconocidos: 0,
     sucursales_origen_no_reconocidas: 0,
     sucursales_destino_no_reconocidas: 0,
+    destinos_multiples: 0,
+    destinos_candidatos_no_reconocidos: 0,
     asesores_no_reconocidos: 0,
     procesos_no_reconocidos: 0,
     origenes_no_reconocidos: 0,

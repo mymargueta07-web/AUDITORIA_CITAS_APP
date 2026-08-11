@@ -1,0 +1,10 @@
+# Archivos auxiliares y artefactos locales que no pertenecen a Apps Script.
+**/scripts/**
+**/reportes/**
+**/supabase/**
+**/node_modules/**
+**/*.md
+**/*.json
+
+# Manifiesto requerido por el proyecto de Apps Script.
+!appsscript.json
