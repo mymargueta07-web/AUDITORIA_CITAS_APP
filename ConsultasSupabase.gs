@@ -35,6 +35,108 @@ function obtenerTodasCitasConDestinosSupabase_() {
   );
 }
 
+function normalizarFechaFiltroConsultaSupabase_(valor) {
+  const fecha = normalizarFechaCanonicaConsultaSupabase_(valor);
+  const partes = fecha.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (!partes) {
+    throw new Error('Fecha no válida');
+  }
+
+  const anio = Number(partes[1]);
+  const mes = Number(partes[2]);
+  const dia = Number(partes[3]);
+  const esBisiesto = anio % 4 === 0 && (anio % 100 !== 0 || anio % 400 === 0);
+  const diasPorMes = [
+    31,
+    esBisiesto ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31
+  ];
+
+  if (mes < 1 || mes > 12 || dia < 1 || dia > diasPorMes[mes - 1]) {
+    throw new Error('Fecha no válida');
+  }
+
+  return fecha;
+}
+
+function obtenerCitasPorFechaConDestinosSupabase_(fechaSeleccionada) {
+  const fecha = normalizarFechaFiltroConsultaSupabase_(fechaSeleccionada);
+  const citas = [];
+  let offset = 0;
+
+  for (
+    let pagina = 0;
+    pagina < CONSULTAS_SUPABASE_MAXIMO_PAGINAS_;
+    pagina++
+  ) {
+    const lote = obtenerCitasConDestinosSupabase_({
+      fechaCita: fecha,
+      limit: CONSULTAS_SUPABASE_TAMANO_PAGINA_,
+      offset: offset
+    });
+
+    citas.push.apply(citas, lote);
+
+    if (lote.length < CONSULTAS_SUPABASE_TAMANO_PAGINA_) {
+      return citas;
+    }
+
+    offset += CONSULTAS_SUPABASE_TAMANO_PAGINA_;
+  }
+
+  throw new Error(
+    'La paginación de citas por fecha superó el máximo seguro de ' +
+    CONSULTAS_SUPABASE_MAXIMO_PAGINAS_ + ' páginas.'
+  );
+}
+
+function obtenerUniversoSucursalesConsultaSupabase_() {
+  const sucursales = new Set();
+  let offset = 0;
+
+  for (
+    let pagina = 0;
+    pagina < CONSULTAS_SUPABASE_MAXIMO_PAGINAS_;
+    pagina++
+  ) {
+    const lote = obtenerSucursalesOrigenCitasSupabase_({
+      limit: CONSULTAS_SUPABASE_TAMANO_PAGINA_,
+      offset: offset
+    });
+
+    lote.forEach(function(registro) {
+      const sucursal = registro.sucursal_origen_texto || '';
+
+      if (sucursal) {
+        sucursales.add(sucursal);
+      }
+    });
+
+    if (lote.length < CONSULTAS_SUPABASE_TAMANO_PAGINA_) {
+      return Array.from(sucursales).sort().map(function(sucursal) {
+        return { sucursal: sucursal };
+      });
+    }
+
+    offset += CONSULTAS_SUPABASE_TAMANO_PAGINA_;
+  }
+
+  throw new Error(
+    'La paginación del universo de sucursales superó el máximo seguro de ' +
+    CONSULTAS_SUPABASE_MAXIMO_PAGINAS_ + ' páginas.'
+  );
+}
+
 function getCitasRawSupabase() {
   return obtenerTodasCitasConDestinosSupabase_();
 }
@@ -258,14 +360,43 @@ function consultarCitasSupabase(filtros) {
 }
 
 function getCitasByFechaSupabase(fechaSeleccionada) {
-  if (!fechaSeleccionada) {
+  try {
+    const fecha = normalizarFechaFiltroConsultaSupabase_(fechaSeleccionada);
+    const citas = mapCitasSupabase(
+      obtenerCitasPorFechaConDestinosSupabase_(fecha)
+    );
+    const universoSucursales = obtenerUniversoSucursalesConsultaSupabase_();
+
+    return construirRespuestaConsultaSupabase_(
+      citas,
+      universoSucursales,
+      fecha
+    );
+  } catch (error) {
     return {
       ok: false,
-      mensaje: 'Fecha no válida'
+      mensaje: error.message || error.toString()
     };
   }
+}
 
-  return consultarCitasSupabase({ fecha: fechaSeleccionada });
+function probarRendimientoConsultaFechaSupabase(fecha) {
+  const fechaPrueba = normalizarFechaFiltroConsultaSupabase_(fecha);
+  const inicio = Date.now();
+  const resultado = getCitasByFechaSupabase(fechaPrueba);
+  const fin = Date.now();
+
+  Logger.log('FECHA: ' + fechaPrueba);
+  Logger.log('TOTAL: ' + (resultado.ok ? resultado.total : 0));
+  Logger.log('TIEMPO_MS: ' + (fin - inicio));
+
+  return resultado;
+}
+
+function probarRendimientoConsultaFechaSupabaseManual() {
+  const FECHA_PRUEBA = '2026-07-18';
+
+  return probarRendimientoConsultaFechaSupabase(FECHA_PRUEBA);
 }
 
 function obtenerClaveComparacionSheets_(fila, mapa, filaOrigen, ss) {

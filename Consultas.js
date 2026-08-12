@@ -259,7 +259,41 @@ function normalizarFechaConsulta_(valor, tz) {
 /**
  * Obtiene citas filtradas por fecha.
  */
+function obtenerFuenteConsultaCitas_() {
+  const valorConfigurado = PropertiesService
+    .getScriptProperties()
+    .getProperty('FUENTE_CONSULTA_CITAS');
+  const fuente = valorConfigurado === null
+    ? 'SHEETS'
+    : String(valorConfigurado).trim().toUpperCase();
+
+  if (fuente !== 'SHEETS' && fuente !== 'SUPABASE') {
+    throw new Error(
+      'Valor inválido para FUENTE_CONSULTA_CITAS: ' + fuente +
+      '. Valores permitidos: SHEETS o SUPABASE.'
+    );
+  }
+
+  return fuente;
+}
+
+function probarFuenteConsultaCitas() {
+  Logger.log(
+    'FUENTE CONSULTA CITAS: ' + obtenerFuenteConsultaCitas_()
+  );
+}
+
 function getCitasByFecha(fechaSeleccionada) {
+  const fuente = obtenerFuenteConsultaCitas_();
+
+  if (fuente === 'SUPABASE') {
+    return getCitasByFechaSupabase(fechaSeleccionada);
+  }
+
+  return getCitasByFechaSheets_(fechaSeleccionada);
+}
+
+function getCitasByFechaSheets_(fechaSeleccionada) {
 
   try {
 

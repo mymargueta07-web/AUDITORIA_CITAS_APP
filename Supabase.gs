@@ -159,9 +159,34 @@ function obtenerCitasSupabase_(opciones) {
     'estado_codigo',
     'fecha_venta'
   ];
+  const filtroFechaCita = opcionesConsulta.fechaCita
+    ? '&fecha_cita=eq.' + encodeURIComponent(opcionesConsulta.fechaCita)
+    : '';
   const ruta =
     'citas?select=' + campos.join(',') +
+    filtroFechaCita +
     '&order=fecha_registro.asc,id.asc' +
+    '&limit=' + limit +
+    '&offset=' + offset;
+
+  return supabaseRequest_(ruta, { method: 'GET' });
+}
+
+function obtenerSucursalesOrigenCitasSupabase_(opciones) {
+  const opcionesConsulta = opciones || {};
+  const limit = normalizarEnteroSupabase_(
+    opcionesConsulta.limit,
+    100,
+    SUPABASE_MAXIMO_LIMIT_CITAS_
+  );
+  const offset = normalizarEnteroSupabase_(
+    opcionesConsulta.offset,
+    0,
+    Number.MAX_SAFE_INTEGER
+  );
+  const ruta =
+    'citas?select=sucursal_origen_texto' +
+    '&order=sucursal_origen_texto.asc,id.asc' +
     '&limit=' + limit +
     '&offset=' + offset;
 
