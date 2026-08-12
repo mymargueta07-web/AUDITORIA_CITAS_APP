@@ -129,6 +129,7 @@ function obtenerDatosIniciales() {
         const nombre = sucursal.toUpperCase();
 
         return (
+          nombre !== 'BANK' &&
           nombre !== 'CALL CENTER / CENTRAL' &&
           nombre !== 'CALL CENTER CHALATENANGO'
         );

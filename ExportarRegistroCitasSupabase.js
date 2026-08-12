@@ -507,14 +507,10 @@ function construirRegistroCitaSupabase_(contexto) {
     );
   }
 
-  const sucursalOrigenCanonica =
-    sucursalOrigen.toUpperCase() === 'BANK'
-      ? 'CALL CENTER / CENTRAL'
-      : sucursalOrigen;
+  const sucursalOrigenCanonica = sucursalOrigen;
 
   if (
     sucursalOrigen &&
-    sucursalOrigen.toUpperCase() !== 'BANK' &&
     !contexto.catalogos.sucursales.has(
       sucursalOrigen
     )

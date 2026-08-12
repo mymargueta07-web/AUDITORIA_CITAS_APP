@@ -494,9 +494,9 @@ async function ejecutarPreflight(seleccionados, reporte) {
     legacy_id_repetible: esquema.legacy_id_no_unico,
     numero_normalizado_nullable: esquema.numero_normalizado_nullable,
     proceso_h2b_usa_cad: existeH2bUsaCad,
-    bank_resuelve_call_center: seleccionados.every(function(item) {
+    bank_resuelve_bank: seleccionados.every(function(item) {
       return clave(item.cita.sucursal_origen_texto) !== 'BANK' ||
-        clave(item.cita.sucursal_origen_resuelta) === 'CALL CENTER / CENTRAL';
+        clave(item.cita.sucursal_origen_resuelta) === 'BANK';
     }),
     payload_no_envia_codigo: payloads.every(function(payload) {
       return !Object.prototype.hasOwnProperty.call(payload, 'codigo');

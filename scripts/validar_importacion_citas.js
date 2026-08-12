@@ -23,7 +23,8 @@ const MIGRACIONES_CATALOGOS = [
   '20260728190000_esquema_inicial_citas.sql',
   '20260728200000_catalogos_iniciales.sql',
   '20260730123000_catalogos_adicionales_importacion_citas.sql',
-  '20260811134315_ajusta_identificadores_y_telefono_citas.sql'
+  '20260811134315_ajusta_identificadores_y_telefono_citas.sql',
+  '20260812090937_bank_sucursal_canonica_y_destinos.sql'
 ];
 const SOURCE_SYSTEM = 'GOOGLE_SHEETS_REGISTROCITAS';
 
@@ -170,7 +171,7 @@ function cargarCatalogosLocales() {
     procesos: crearCatalogo(acumulado.procesos),
     origenes: crearCatalogo(acumulado.origenes),
     estados: crearCatalogo(acumulado.estados),
-    sucursalAliases: Object.freeze({ BANK: 'CALL CENTER / CENTRAL' })
+    sucursalAliases: Object.freeze({})
   };
 }
 
@@ -207,8 +208,9 @@ function resolverCatalogo(valor, catalogo, equivalencias) {
 function resolverSucursalOrigen(registro, catalogos) {
   const original = texto(registro.sucursal_origen_texto);
   const canonica = texto(registro.sucursal_origen_canonica);
-  const equivalente =
-    canonica || catalogos.sucursalAliases[clave(original)] || original;
+  const equivalente = clave(original) === 'BANK'
+    ? 'BANK'
+    : canonica || catalogos.sucursalAliases[clave(original)] || original;
   const resuelto = catalogos.sucursales.get(clave(equivalente));
 
   return {
