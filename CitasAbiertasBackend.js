@@ -9,12 +9,10 @@ const CARPETA_REPORTES_CITAS_ABIERTAS = "Reportes Citas Abiertas";
 const HOJA_SUCURSALES_CITAS_ABIERTAS = "Sucursales";
 
 /**
- * Alias de sucursales
- * BANK se considera parte de CALL CENTER / CENTRAL
+ * Alias vigentes de sucursales.
+ * BANK es una sucursal canónica independiente y conserva su nombre.
  */
-const ALIAS_SUCURSALES_CITAS_ABIERTAS = {
-  "BANK": "CALL CENTER / CENTRAL"
-};
+const ALIAS_SUCURSALES_CITAS_ABIERTAS = {};
 
 /**
  * Estados que se consideran "abiertos"
@@ -63,6 +61,52 @@ function obtenerConfigCitasAbiertas() {
  * @return {Object}
  */
 function obtenerReporteCitasAbiertas(sucursalSeleccionada, fechaDesde, fechaHasta) {
+  const fuente = obtenerFuenteCitasAbiertas_();
+
+  if (fuente === 'SUPABASE') {
+    return getCitasAbiertasSupabase(
+      sucursalSeleccionada,
+      fechaDesde,
+      fechaHasta
+    );
+  }
+
+  return obtenerReporteCitasAbiertasSheets_(
+    sucursalSeleccionada,
+    fechaDesde,
+    fechaHasta
+  );
+}
+
+function obtenerFuenteCitasAbiertas_() {
+  const valorConfigurado = PropertiesService
+    .getScriptProperties()
+    .getProperty('FUENTE_CITAS_ABIERTAS');
+  const fuente = valorConfigurado === null
+    ? 'SHEETS'
+    : String(valorConfigurado).trim().toUpperCase();
+
+  if (fuente !== 'SHEETS' && fuente !== 'SUPABASE') {
+    throw new Error(
+      'Valor inválido para FUENTE_CITAS_ABIERTAS: ' + fuente +
+      '. Valores permitidos: SHEETS o SUPABASE.'
+    );
+  }
+
+  return fuente;
+}
+
+function probarFuenteCitasAbiertas() {
+  Logger.log(
+    'FUENTE CITAS ABIERTAS: ' + obtenerFuenteCitasAbiertas_()
+  );
+}
+
+function obtenerReporteCitasAbiertasSheets_(
+  sucursalSeleccionada,
+  fechaDesde,
+  fechaHasta
+) {
   try {
 
     validarParametrosCitasAbiertas(sucursalSeleccionada, fechaDesde, fechaHasta);
@@ -205,7 +249,7 @@ function validarParametrosCitasAbiertas(sucursalSeleccionada, fechaDesde, fechaH
  * ==========================================================
  *
  * Toma la columna A desde la fila 2.
- * Normaliza BANK => CALL CENTER / CENTRAL.
+ * Aplica los alias vigentes de sucursales.
  * Elimina vacíos y duplicados.
  */
 function obtenerSucursalesCitasAbiertas_() {
@@ -254,7 +298,7 @@ function obtenerSucursalesCitasAbiertas_() {
  * ==========================================================
  *
  * Reglas:
- * - Sucursal debe coincidir (BANK => CALL CENTER / CENTRAL)
+ * - Sucursal debe coincidir después de aplicar los alias vigentes
  * - Timestamp debe estar entre fechaDesde y fechaHasta
  * - Estado debe estar en la lista de estados abiertos
  * - Columna Fecha (H) debe ser:

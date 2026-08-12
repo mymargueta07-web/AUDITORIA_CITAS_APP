@@ -162,9 +162,27 @@ function obtenerCitasSupabase_(opciones) {
   const filtroFechaCita = opcionesConsulta.fechaCita
     ? '&fecha_cita=eq.' + encodeURIComponent(opcionesConsulta.fechaCita)
     : '';
+  const filtroFechaCitaAntesDe = opcionesConsulta.fechaCitaAntesDe
+    ? '&fecha_cita=lt.' + encodeURIComponent(
+      opcionesConsulta.fechaCitaAntesDe
+    )
+    : '';
+  let filtroCitaAbierta = '';
+
+  if (Object.prototype.hasOwnProperty.call(opcionesConsulta, 'citaAbierta')) {
+    if (typeof opcionesConsulta.citaAbierta !== 'boolean') {
+      throw new Error('citaAbierta debe ser un valor booleano.');
+    }
+
+    filtroCitaAbierta =
+      '&cita_abierta=eq.' + encodeURIComponent(opcionesConsulta.citaAbierta);
+  }
+
   const ruta =
     'citas?select=' + campos.join(',') +
     filtroFechaCita +
+    filtroFechaCitaAntesDe +
+    filtroCitaAbierta +
     '&order=fecha_registro.asc,id.asc' +
     '&limit=' + limit +
     '&offset=' + offset;
