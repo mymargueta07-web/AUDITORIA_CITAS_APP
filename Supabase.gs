@@ -211,6 +211,46 @@ function obtenerSucursalesOrigenCitasSupabase_(opciones) {
   return supabaseRequest_(ruta, { method: 'GET' });
 }
 
+function obtenerRegistrosReporteMensualSucursalSupabase_(opciones) {
+  const opcionesConsulta = opciones || {};
+  const limit = normalizarEnteroSupabase_(
+    opcionesConsulta.limit,
+    100,
+    SUPABASE_MAXIMO_LIMIT_CITAS_
+  );
+  const offset = normalizarEnteroSupabase_(
+    opcionesConsulta.offset,
+    0,
+    Number.MAX_SAFE_INTEGER
+  );
+  const fechaRegistroDesde = String(
+    opcionesConsulta.fechaRegistroDesde || ''
+  ).trim();
+  const fechaRegistroAntesDe = String(
+    opcionesConsulta.fechaRegistroAntesDe || ''
+  ).trim();
+  const sucursalOrigen = String(
+    opcionesConsulta.sucursalOrigen || ''
+  ).trim();
+
+  if (!fechaRegistroDesde || !fechaRegistroAntesDe || !sucursalOrigen) {
+    throw new Error(
+      'La consulta mensual requiere rango de fecha y sucursal de origen.'
+    );
+  }
+
+  const ruta =
+    'citas?select=fecha_registro,asesor_texto,sucursal_origen_texto' +
+    '&fecha_registro=gte.' + encodeURIComponent(fechaRegistroDesde) +
+    '&fecha_registro=lt.' + encodeURIComponent(fechaRegistroAntesDe) +
+    '&sucursal_origen_texto=eq.' + encodeURIComponent(sucursalOrigen) +
+    '&order=fecha_registro.asc,id.asc' +
+    '&limit=' + limit +
+    '&offset=' + offset;
+
+  return supabaseRequest_(ruta, { method: 'GET' });
+}
+
 function obtenerDestinosCitasSupabase_(idsCitas) {
   const ids = Array.from(new Set(
     (idsCitas || []).filter(function(id) {

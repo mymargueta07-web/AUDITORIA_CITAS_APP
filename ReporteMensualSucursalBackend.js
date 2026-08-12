@@ -10,6 +10,7 @@ const RMS_HOJA_REGISTRO_CITAS = "RegistroCitas";
  * Sucursales oficiales del reporte
  */
 const RMS_SUCURSALES = [
+  "BANK",
   "CALL CENTER / CENTRAL",
   "MERLIOT",
   "SANTA FE",
@@ -23,12 +24,10 @@ const RMS_SUCURSALES = [
 ];
 
 /**
- * Alias de sucursales
- * BANK se considera parte de CALL CENTER / CENTRAL
+ * Alias vigentes de sucursales.
+ * BANK es una sucursal canónica independiente y conserva su nombre.
  */
-const RMS_ALIAS_SUCURSALES = {
-  "BANK": "CALL CENTER / CENTRAL"
-};
+const RMS_ALIAS_SUCURSALES = {};
 
 /**
  * ==========================================================
@@ -58,6 +57,52 @@ function obtenerConfigReporteMensualSucursal() {
  * @return {Object}
  */
 function obtenerReporteMensualSucursal(sucursalSeleccionada, mes, anio) {
+  const fuente = obtenerFuenteReporteMensual_();
+
+  if (fuente === 'SUPABASE') {
+    return getReporteMensualSucursalSupabase(
+      sucursalSeleccionada,
+      mes,
+      anio
+    );
+  }
+
+  return obtenerReporteMensualSucursalSheets_(
+    sucursalSeleccionada,
+    mes,
+    anio
+  );
+}
+
+function obtenerFuenteReporteMensual_() {
+  const valorConfigurado = PropertiesService
+    .getScriptProperties()
+    .getProperty('FUENTE_REPORTE_MENSUAL');
+  const fuente = valorConfigurado === null
+    ? 'SHEETS'
+    : String(valorConfigurado).trim().toUpperCase();
+
+  if (fuente !== 'SHEETS' && fuente !== 'SUPABASE') {
+    throw new Error(
+      'Valor inválido para FUENTE_REPORTE_MENSUAL: ' + fuente +
+      '. Valores permitidos: SHEETS o SUPABASE.'
+    );
+  }
+
+  return fuente;
+}
+
+function probarFuenteReporteMensual() {
+  Logger.log(
+    'FUENTE REPORTE MENSUAL: ' + obtenerFuenteReporteMensual_()
+  );
+}
+
+function obtenerReporteMensualSucursalSheets_(
+  sucursalSeleccionada,
+  mes,
+  anio
+) {
   try {
     const filtros = validarParametrosReporteMensualSucursal_(
       sucursalSeleccionada,
@@ -146,7 +191,7 @@ function validarParametrosReporteMensualSucursal_(sucursalSeleccionada, mes, ani
  * - Usa la hoja RegistroCitas
  * - Toma la fecha del Timestamp (columna B)
  * - Toma la sucursal desde SucursalOrigen (columna M)
- * - BANK se suma a CALL CENTER / CENTRAL
+ * - Aplica los alias vigentes; BANK permanece independiente
  * - Agrupa por Asesor (columna J)
  */
 function obtenerRegistrosReporteMensualSucursal_(sucursalSeleccionada, mes, anio) {
