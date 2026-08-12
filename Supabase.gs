@@ -4,6 +4,7 @@
  */
 
 const SUPABASE_MAXIMO_LIMIT_CITAS_ = 100;
+const SUPABASE_MAX_IDS_POR_FILTRO_ = 20;
 
 function obtenerConfiguracionSupabase_() {
   const propiedades = PropertiesService.getScriptProperties();
@@ -72,11 +73,33 @@ function supabaseRequest_(ruta, opciones) {
 
     throw new Error(
       'Error Supabase HTTP ' + codigoHttp +
-      ' en ruta ' + ruta + ': ' + mensaje
+      ' en recurso ' + obtenerRecursoRutaSupabase_(ruta) + ': ' + mensaje
     );
   }
 
   return contenido ? JSON.parse(contenido) : null;
+}
+
+function obtenerRecursoRutaSupabase_(ruta) {
+  return String(ruta || '').split('?')[0] || 'desconocido';
+}
+
+function dividirEnLotesSupabase_(valores, tamano) {
+  if (!Array.isArray(valores)) {
+    return [];
+  }
+
+  if (!Number.isInteger(tamano) || tamano <= 0) {
+    throw new Error('El tamaño de lote Supabase debe ser un entero positivo.');
+  }
+
+  const lotes = [];
+
+  for (let indice = 0; indice < valores.length; indice += tamano) {
+    lotes.push(valores.slice(indice, indice + tamano));
+  }
+
+  return lotes;
 }
 
 function normalizarEnteroSupabase_(valor, predeterminado, maximo) {
@@ -138,7 +161,7 @@ function obtenerCitasSupabase_(opciones) {
   ];
   const ruta =
     'citas?select=' + campos.join(',') +
-    '&order=fecha_registro.asc' +
+    '&order=fecha_registro.asc,id.asc' +
     '&limit=' + limit +
     '&offset=' + offset;
 
@@ -156,36 +179,60 @@ function obtenerDestinosCitasSupabase_(idsCitas) {
     return [];
   }
 
-  const idsSerializados = ids.map(function(id) {
-    return encodeURIComponent(id);
-  }).join(',');
-  const destinos = supabaseRequest_(
-    'cita_destinos?select=cita_id,sucursal_id,orden' +
-    '&cita_id=in.(' + idsSerializados + ')' +
-    '&order=cita_id.asc,orden.asc',
-    { method: 'GET' }
-  );
+  const destinos = [];
 
-  if (!destinos || destinos.length === 0) {
+  dividirEnLotesSupabase_(ids, SUPABASE_MAX_IDS_POR_FILTRO_)
+    .forEach(function(loteIdsCitas) {
+      const idsSerializados = loteIdsCitas.map(function(id) {
+        return encodeURIComponent(id);
+      }).join(',');
+      const loteDestinos = supabaseRequest_(
+        'cita_destinos?select=cita_id,sucursal_id,orden' +
+        '&cita_id=in.(' + idsSerializados + ')' +
+        '&order=cita_id.asc,orden.asc',
+        { method: 'GET' }
+      );
+
+      if (loteDestinos && loteDestinos.length > 0) {
+        destinos.push.apply(destinos, loteDestinos);
+      }
+    });
+
+  if (destinos.length === 0) {
     return [];
   }
+
+  destinos.sort(function(a, b) {
+    const comparacionCita = String(a.cita_id).localeCompare(String(b.cita_id));
+
+    return comparacionCita || Number(a.orden) - Number(b.orden);
+  });
 
   const idsSucursales = Array.from(new Set(
     destinos.map(function(destino) {
       return destino.sucursal_id;
     }).filter(Boolean)
   ));
-  const sucursales = supabaseRequest_(
-    'sucursales?select=id,nombre&id=in.(' +
-    idsSucursales.map(function(id) {
-      return encodeURIComponent(id);
-    }).join(',') +
-    ')',
-    { method: 'GET' }
-  );
+  const sucursales = [];
+
+  dividirEnLotesSupabase_(idsSucursales, SUPABASE_MAX_IDS_POR_FILTRO_)
+    .forEach(function(loteIdsSucursales) {
+      const loteSucursales = supabaseRequest_(
+        'sucursales?select=id,nombre&id=in.(' +
+        loteIdsSucursales.map(function(id) {
+          return encodeURIComponent(id);
+        }).join(',') +
+        ')',
+        { method: 'GET' }
+      );
+
+      if (loteSucursales && loteSucursales.length > 0) {
+        sucursales.push.apply(sucursales, loteSucursales);
+      }
+    });
   const nombresSucursales = {};
 
-  (sucursales || []).forEach(function(sucursal) {
+  sucursales.forEach(function(sucursal) {
     nombresSucursales[sucursal.id] = sucursal.nombre;
   });
 
