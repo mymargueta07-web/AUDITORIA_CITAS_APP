@@ -251,6 +251,73 @@ function obtenerRegistrosReporteMensualSucursalSupabase_(opciones) {
   return supabaseRequest_(ruta, { method: 'GET' });
 }
 
+function obtenerSucursalesCitasRegistradasReporteDiarioSupabase_(opciones) {
+  const opcionesConsulta = opciones || {};
+  const limit = normalizarEnteroSupabase_(
+    opcionesConsulta.limit,
+    100,
+    SUPABASE_MAXIMO_LIMIT_CITAS_
+  );
+  const offset = normalizarEnteroSupabase_(
+    opcionesConsulta.offset,
+    0,
+    Number.MAX_SAFE_INTEGER
+  );
+  const fechaRegistroDesde = String(
+    opcionesConsulta.fechaRegistroDesde || ''
+  ).trim();
+  const fechaRegistroAntesDe = String(
+    opcionesConsulta.fechaRegistroAntesDe || ''
+  ).trim();
+
+  if (!fechaRegistroDesde || !fechaRegistroAntesDe) {
+    throw new Error(
+      'La consulta diaria de citas requiere un rango de fecha_registro.'
+    );
+  }
+
+  const ruta =
+    'citas?select=sucursal_origen_texto' +
+    '&fecha_registro=gte.' + encodeURIComponent(fechaRegistroDesde) +
+    '&fecha_registro=lt.' + encodeURIComponent(fechaRegistroAntesDe) +
+    '&order=fecha_registro.asc,id.asc' +
+    '&limit=' + limit +
+    '&offset=' + offset;
+
+  return supabaseRequest_(ruta, { method: 'GET' });
+}
+
+function obtenerSucursalesVentasCerradasReporteDiarioSupabase_(opciones) {
+  const opcionesConsulta = opciones || {};
+  const limit = normalizarEnteroSupabase_(
+    opcionesConsulta.limit,
+    100,
+    SUPABASE_MAXIMO_LIMIT_CITAS_
+  );
+  const offset = normalizarEnteroSupabase_(
+    opcionesConsulta.offset,
+    0,
+    Number.MAX_SAFE_INTEGER
+  );
+  const fechaVenta = String(opcionesConsulta.fechaVenta || '').trim();
+
+  if (!fechaVenta) {
+    throw new Error(
+      'La consulta diaria de ventas requiere una fecha_venta.'
+    );
+  }
+
+  const ruta =
+    'citas?select=sucursal_origen_texto' +
+    '&fecha_venta=eq.' + encodeURIComponent(fechaVenta) +
+    '&estado_codigo=eq.' + encodeURIComponent('VENTA CERRADA') +
+    '&order=sucursal_origen_texto.asc,id.asc' +
+    '&limit=' + limit +
+    '&offset=' + offset;
+
+  return supabaseRequest_(ruta, { method: 'GET' });
+}
+
 function obtenerDestinosCitasSupabase_(idsCitas) {
   const ids = Array.from(new Set(
     (idsCitas || []).filter(function(id) {

@@ -4,7 +4,69 @@
  * ===========================================
  */
 
+const REPORTE_DIARIO_SUCURSALES_ = [
+  "BANK",
+  "CALL CENTER / CENTRAL",
+  "CALL CENTER CHALATENANGO",
+  "CHALATENANGO",
+  "AGUILARES",
+  "SANTA FE",
+  "MERLIOT",
+  "CIUDAD ARCE",
+  "USULUTAN",
+  "SANTA ROSA DE LIMA",
+  "LA PALMA"
+];
+
+const REPORTE_DIARIO_NOMBRES_VISUALES_ = {
+  "BANK": "BANK",
+  "CALL CENTER / CENTRAL": "CALL CENTER",
+  "CALL CENTER CHALATENANGO": "CALL CHALATE",
+  "CHALATENANGO": "CHALATE Centro",
+  "AGUILARES": "AGUILARES",
+  "SANTA FE": "SANTA FE",
+  "MERLIOT": "MERLIOT",
+  "CIUDAD ARCE": "C ARCE",
+  "USULUTAN": "USULUTAN",
+  "SANTA ROSA DE LIMA": "S ROSA DE LIMA",
+  "LA PALMA": "LA PALMA"
+};
+
 function obtenerReporteDiario(fechaSeleccionada) {
+  const fuente = obtenerFuenteReporteDiario_();
+
+  if (fuente === 'HIBRIDO') {
+    return obtenerReporteDiarioHibrido_(fechaSeleccionada);
+  }
+
+  return obtenerReporteDiarioSheets_(fechaSeleccionada);
+}
+
+function obtenerFuenteReporteDiario_() {
+  const valorConfigurado = PropertiesService
+    .getScriptProperties()
+    .getProperty('FUENTE_REPORTE_DIARIO');
+  const fuente = valorConfigurado === null
+    ? 'SHEETS'
+    : String(valorConfigurado).trim().toUpperCase();
+
+  if (fuente !== 'SHEETS' && fuente !== 'HIBRIDO') {
+    throw new Error(
+      'Valor inválido para FUENTE_REPORTE_DIARIO: ' + fuente +
+      '. Valores permitidos: SHEETS o HIBRIDO.'
+    );
+  }
+
+  return fuente;
+}
+
+function probarFuenteReporteDiario() {
+  Logger.log(
+    'FUENTE REPORTE DIARIO: ' + obtenerFuenteReporteDiario_()
+  );
+}
+
+function obtenerReporteDiarioSheets_(fechaSeleccionada) {
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
@@ -73,68 +135,16 @@ function obtenerReporteDiario(fechaSeleccionada) {
   // ORDEN REAL DEL REPORTE
   // =====================================================
 
-  const sucursales = [
-
-    "CALL CENTER / CENTRAL",
-
-    "CALL CENTER CHALATENANGO",
-
-    "CHALATENANGO",
-
-    "AGUILARES",
-
-    "SANTA FE",
-
-    "MERLIOT",
-
-    "CIUDAD ARCE",
-
-    "USULUTAN",
-
-    "SANTA ROSA DE LIMA",
-
-    "LA PALMA"
-
-  ];
+  const sucursales =
+    REPORTE_DIARIO_SUCURSALES_.slice();
 
 
   // =====================================================
   // NOMBRES VISUALES
   // =====================================================
 
-  const NOMBRES_VISUALES = {
-
-    "CALL CENTER / CENTRAL":
-      "CALL CENTER",
-
-    "CALL CENTER CHALATENANGO":
-      "CALL CHALATE",
-
-    "CHALATENANGO":
-      "CHALATE Centro",
-
-    "AGUILARES":
-      "AGUILARES",
-
-    "SANTA FE":
-      "SANTA FE",
-
-    "MERLIOT":
-      "MERLIOT",
-
-    "CIUDAD ARCE":
-      "C ARCE",
-
-    "USULUTAN":
-      "USULUTAN",
-
-    "SANTA ROSA DE LIMA":
-      "S ROSA DE LIMA",
-
-    "LA PALMA":
-      "LA PALMA"
-
-  };
+  const NOMBRES_VISUALES =
+    REPORTE_DIARIO_NOMBRES_VISUALES_;
 
 
   const reporte = {};
@@ -348,10 +358,11 @@ function normalizarSucursalReporte_(valor) {
 
   const equivalencias = {
 
-    // CALL CENTER / CENTRAL
+    // BANK
     "BANK":
-      "CALL CENTER / CENTRAL",
+      "BANK",
 
+    // CALL CENTER / CENTRAL
     "CALL CENTER":
       "CALL CENTER / CENTRAL",
 
