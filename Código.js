@@ -590,6 +590,22 @@ function obtenerDiferenciasPayloadIdempotenteCita_(datosCita, persistida) {
 
 function guardarCita(datosCita) {
   const lock = LockService.getScriptLock();
+  let modoEscrituraSupabase;
+  let persistenciaSheets = null;
+
+  try {
+    modoEscrituraSupabase = obtenerModoEscrituraCitasSupabase_();
+  } catch (error) {
+    Logger.log(
+      'ERROR CONFIGURACION ESCRITURA CITAS SUPABASE: ' +
+      (error.message || error.toString())
+    );
+    return {
+      exito: false,
+      exitoSheets: false,
+      mensaje: 'La configuración técnica de escritura de citas no es válida'
+    };
+  }
 
   try {
     lock.waitLock(30000);
@@ -716,83 +732,89 @@ function guardarCita(datosCita) {
         };
       }
 
-      return {
-        exito: true,
-        mensaje: 'Cita registrada correctamente',
-        id: citaPersistida.id,
+      persistenciaSheets = {
+        candidato: capturarCandidatoSupabaseDesdeFilaCita_(
+          hojaDestino,
+          mapa,
+          filaExistente
+        ),
         reutilizada: true
       };
     }
 
-    if (datosCita.forzarDuplicado !== true) {
-      const coincidencias = buscarCitasDuplicadas_(hojaDestino, datosCita);
+    if (!persistenciaSheets) {
+      if (datosCita.forzarDuplicado !== true) {
+        const coincidencias = buscarCitasDuplicadas_(hojaDestino, datosCita);
 
-      if (coincidencias.length > 0) {
-        return {
-          exito: false,
-          duplicado: true,
-          mensaje: 'Ya existe una posible cita duplicada',
-          coincidencias: coincidencias
-        };
+        if (coincidencias.length > 0) {
+          return {
+            exito: false,
+            duplicado: true,
+            mensaje: 'Ya existe una posible cita duplicada',
+            coincidencias: coincidencias
+          };
+        }
       }
-    }
 
-    // Obtener último ID
-    let ultimoID = 0;
-    const ultimaFila = hojaDestino.getLastRow();
-    if (ultimaFila >= 2) {
-      const idsRange = hojaDestino.getRange(
-        2,
-        mapa.ID,
-        ultimaFila - 1,
-        1
-      );
-      const ids = idsRange.getValues().flat().filter(val => val && val.toString().trim() !== '');
-      for (let id of ids) {
-        let num = parseInt(id.toString(), 10);
-        if (!isNaN(num) && num > ultimoID) ultimoID = num;
+      // Obtener último ID
+      let ultimoID = 0;
+      const ultimaFila = hojaDestino.getLastRow();
+      if (ultimaFila >= 2) {
+        const idsRange = hojaDestino.getRange(
+          2,
+          mapa.ID,
+          ultimaFila - 1,
+          1
+        );
+        const ids = idsRange.getValues().flat().filter(val => val && val.toString().trim() !== '');
+        for (let id of ids) {
+          let num = parseInt(id.toString(), 10);
+          if (!isNaN(num) && num > ultimoID) ultimoID = num;
+        }
       }
+      const nuevoID = ultimoID + 1;
+      const idFormateado = String(nuevoID).padStart(4, "0");
+
+      // Crear fila
+      const fila = new Array(hojaDestino.getLastColumn()).fill('');
+
+      fila[mapa.ID - 1] = idFormateado;
+      fila[mapa.Timestamp - 1] = new Date();
+      fila[mapa.Cliente - 1] = datosCita.cliente;
+      fila[mapa.Proceso - 1] = datosCita.proceso;
+      fila[mapa.Numero - 1] = datosCita.numero;
+      fila[mapa.Precio - 1] = datosCita.precio;
+      fila[mapa.Extras - 1] = datosCita.extras || '';
+      fila[mapa.Fecha - 1] = datosCita.fecha;
+      fila[mapa.SucursalDestino - 1] = datosCita.sucursalDestino;
+      fila[mapa.Asesor - 1] = datosCita.asesor;
+      fila[mapa.Nota - 1] = datosCita.nota || '';
+      fila[mapa.Origen - 1] = datosCita.origen;
+      fila[mapa.SucursalOrigen - 1] = datosCita.sucursalOrigen;
+      fila[mapa.ESTADO - 1] = 'EN ESPERA DE CITA';
+      fila[mapa['FECHA DE VENTA'] - 1] = '';
+      fila[mapa.HORA - 1] = datosCita.hora || '';
+      fila[mapa.OperationId - 1] = operationId;
+      fila[mapa.SUPABASE_SYNC_ESTADO - 1] = 'PENDIENTE';
+      fila[mapa.SUPABASE_ID - 1] = '';
+      fila[mapa.SUPABASE_SYNC_ULTIMO_INTENTO - 1] = '';
+      fila[mapa.SUPABASE_SYNC_ERROR - 1] = '';
+
+      hojaDestino.appendRow(fila);
+      // Reaplicar validación por si la nueva fila no la heredó.
+      hojaDestino
+        .getRange(2, mapa.ESTADO, hojaDestino.getMaxRows() - 1, 1)
+        .setDataValidation(reglaValidacion);
+
+      persistenciaSheets = {
+        candidato: capturarCandidatoSupabaseDesdeFilaCita_(
+          hojaDestino,
+          mapa,
+          hojaDestino.getLastRow()
+        ),
+        reutilizada: false
+      };
     }
-    const nuevoID = ultimoID + 1;
-    const idFormateado = String(nuevoID).padStart(4, "0");
-
-    // Crear fila
-    const fila = new Array(hojaDestino.getLastColumn()).fill('');
-
-    fila[mapa.ID - 1] = idFormateado;
-    fila[mapa.Timestamp - 1] = new Date();
-    fila[mapa.Cliente - 1] = datosCita.cliente;
-    fila[mapa.Proceso - 1] = datosCita.proceso;
-    fila[mapa.Numero - 1] = datosCita.numero;
-    fila[mapa.Precio - 1] = datosCita.precio;
-    fila[mapa.Extras - 1] = datosCita.extras || '';
-    fila[mapa.Fecha - 1] = datosCita.fecha;
-    fila[mapa.SucursalDestino - 1] = datosCita.sucursalDestino;
-    fila[mapa.Asesor - 1] = datosCita.asesor;
-    fila[mapa.Nota - 1] = datosCita.nota || '';
-    fila[mapa.Origen - 1] = datosCita.origen;
-    fila[mapa.SucursalOrigen - 1] = datosCita.sucursalOrigen;
-    fila[mapa.ESTADO - 1] = 'EN ESPERA DE CITA';
-    fila[mapa['FECHA DE VENTA'] - 1] = '';
-    fila[mapa.HORA - 1] = datosCita.hora || '';
-    fila[mapa.OperationId - 1] = operationId;
-    fila[mapa.SUPABASE_SYNC_ESTADO - 1] = 'PENDIENTE';
-    fila[mapa.SUPABASE_ID - 1] = '';
-    fila[mapa.SUPABASE_SYNC_ULTIMO_INTENTO - 1] = '';
-    fila[mapa.SUPABASE_SYNC_ERROR - 1] = '';
-
-    hojaDestino.appendRow(fila);
-    // Reaplicar validación por si la nueva fila no la heredó.
-    hojaDestino
-      .getRange(2, mapa.ESTADO, hojaDestino.getMaxRows() - 1, 1)
-      .setDataValidation(reglaValidacion);
-
-    return {
-      exito: true,
-      mensaje: 'Cita registrada correctamente',
-      id: idFormateado,
-      reutilizada: false
-    };
   } catch (error) {
     return { exito: false, mensaje: error.toString() };
   } finally {
@@ -800,6 +822,53 @@ function guardarCita(datosCita) {
       lock.releaseLock();
     }
   }
+
+  const candidatoPersistido = persistenciaSheets.candidato;
+  const respuestaBase = {
+    exito: true,
+    exitoSheets: true,
+    mensaje: 'Cita registrada correctamente',
+    id: candidatoPersistido.legacyId,
+    reutilizada: persistenciaSheets.reutilizada
+  };
+
+  if (
+    modoEscrituraSupabase ===
+    ESCRITURA_CITAS_SUPABASE_DESACTIVADA_
+  ) {
+    return Object.assign({}, respuestaBase, {
+      sincronizacionSupabase: ESCRITURA_CITAS_SUPABASE_DESACTIVADA_,
+      supabaseId: String(candidatoPersistido.supabaseId || '')
+    });
+  }
+
+  let resultadoSupabase = null;
+
+  try {
+    resultadoSupabase = sincronizarCitaPersistidaSupabase_(
+      candidatoPersistido.fila,
+      candidatoPersistido.operationId,
+      candidatoPersistido.legacyId,
+      candidatoPersistido.fechaRegistro
+    );
+  } catch (error) {
+    // Sheets ya es la fuente primaria. No se expone el detalle técnico.
+  }
+
+  const sincronizada = Boolean(
+    resultadoSupabase &&
+    resultadoSupabase.exito === true &&
+    resultadoSupabase.estadoFinal ===
+      SINCRONIZACION_CITA_SUPABASE_ESTADO_SINCRONIZADA_ &&
+    String(resultadoSupabase.supabaseId || '').trim()
+  );
+
+  return Object.assign({}, respuestaBase, {
+    sincronizacionSupabase: sincronizada
+      ? SINCRONIZACION_CITA_SUPABASE_ESTADO_SINCRONIZADA_
+      : SINCRONIZACION_CITA_SUPABASE_ESTADO_ERROR_,
+    supabaseId: sincronizada ? resultadoSupabase.supabaseId : ''
+  });
 }
 
 function obtenerMapaEncabezados_(hoja) {

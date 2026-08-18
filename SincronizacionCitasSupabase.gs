@@ -1,13 +1,16 @@
 /**
  * Sincronización manual y controlada de una sola cita RegistroCitas -> Supabase.
  *
- * No se invoca desde guardarCita(). La única escritura remota requiere una
- * Script Property explícita y usa el RPC transaccional e idempotente.
+ * La escritura operativa solo se invoca después de persistir Sheets y usa el
+ * RPC transaccional e idempotente. La función manual conserva confirmación.
  */
 
 const SINCRONIZACION_CITA_SUPABASE_CONFIRMACION_PROPERTY_ =
   'CONFIRMAR_SINCRONIZACION_CITA_SUPABASE';
 const SINCRONIZACION_CITA_SUPABASE_CONFIRMACION_VALOR_ = 'SI';
+const ESCRITURA_CITAS_SUPABASE_PROPERTY_ = 'ESCRITURA_CITAS_SUPABASE';
+const ESCRITURA_CITAS_SUPABASE_DESACTIVADA_ = 'DESACTIVADA';
+const ESCRITURA_CITAS_SUPABASE_DUAL_WRITE_ = 'DUAL_WRITE';
 const SINCRONIZACION_CITA_SUPABASE_ESTADO_PENDIENTE_ = 'PENDIENTE';
 const SINCRONIZACION_CITA_SUPABASE_ESTADO_SINCRONIZADA_ = 'SINCRONIZADA';
 const SINCRONIZACION_CITA_SUPABASE_ESTADO_ERROR_ = 'ERROR';
@@ -29,6 +32,30 @@ const SINCRONIZACION_CITA_SUPABASE_CAMPOS_SNAPSHOT_ = [
   'estado',
   'fechaVenta'
 ];
+
+function obtenerModoEscrituraCitasSupabase_() {
+  const valor = PropertiesService
+    .getScriptProperties()
+    .getProperty(ESCRITURA_CITAS_SUPABASE_PROPERTY_);
+
+  if (valor === null) {
+    return ESCRITURA_CITAS_SUPABASE_DESACTIVADA_;
+  }
+
+  const modo = String(valor).trim().toUpperCase();
+
+  if (
+    modo !== ESCRITURA_CITAS_SUPABASE_DESACTIVADA_ &&
+    modo !== ESCRITURA_CITAS_SUPABASE_DUAL_WRITE_
+  ) {
+    throw new Error(
+      'Valor inválido para la Script Property ' +
+      ESCRITURA_CITAS_SUPABASE_PROPERTY_ + '.'
+    );
+  }
+
+  return modo;
+}
 
 function exigirConfirmacionSincronizacionCitaSupabase_() {
   const valor = PropertiesService
@@ -288,7 +315,10 @@ function registrarResultadoSincronizacionCitaSupabase_(resultado) {
   Logger.log('REUTILIZADA: ' + resultado.reutilizada);
   Logger.log('DESTINOS ESPERADOS: ' + resultado.destinosEsperados);
   Logger.log('DESTINOS VERIFICADOS: ' + resultado.destinosVerificados);
-  Logger.log('SUPABASE ID: ' + (resultado.supabaseId || ''));
+  Logger.log(
+    'SUPABASE ID: ' +
+    enmascararIdSincronizacionCitaSupabase_(resultado.supabaseId)
+  );
   Logger.log('ESTADO FINAL: ' + resultado.estadoFinal);
   Logger.log('EXITO: ' + resultado.exito);
 }
@@ -402,9 +432,7 @@ function ejecutarFaseRemotaSincronizacionCitaSupabase_(
   }
 
   resultado.destinosVerificados = verificacion.destinos.length;
-  resultado.supabaseId = enmascararIdSincronizacionCitaSupabase_(
-    verificacion.remota.id
-  );
+  resultado.supabaseId = verificacion.remota.id;
 
   return {
     candidato: candidato,
@@ -412,12 +440,8 @@ function ejecutarFaseRemotaSincronizacionCitaSupabase_(
   };
 }
 
-/**
- * Sincroniza una sola cita: la última fila PENDIENTE que supera el preflight.
- * Requiere CONFIRMAR_SINCRONIZACION_CITA_SUPABASE=SI en Script Properties.
- */
-function sincronizarUltimaCitaPendienteSupabase() {
-  const resultado = {
+function crearResultadoSincronizacionCitaSupabase_() {
+  return {
     fila: '',
     legacyId: '',
     operationId: '********',
@@ -431,27 +455,136 @@ function sincronizarUltimaCitaPendienteSupabase() {
     estadoFinal: 'ABORTADA',
     exito: false
   };
+}
+
+function sincronizarCitaPersistidaSupabase_(
+  numeroFila,
+  operationId,
+  legacyId,
+  timestamp
+) {
+  const resultado = crearResultadoSincronizacionCitaSupabase_();
   let origen = null;
   let candidato = null;
   let supabaseId = null;
   let errorRemoto = null;
 
   try {
-    exigirConfirmacionSincronizacionCitaSupabase_();
+    const filaEsperada = Number(numeroFila);
+    const operationIdEsperado = normalizarOperationIdCita_(operationId);
+    const legacyIdEsperado = String(legacyId || '').trim();
+
+    if (!Number.isInteger(filaEsperada) || filaEsperada < 2) {
+      throw new Error('La fila persistida para dual-write no es válida.');
+    }
+
+    if (!/^\d+$/.test(legacyIdEsperado)) {
+      throw new Error('El legacyId persistido para dual-write no es válido.');
+    }
+
+    if (
+      Object.prototype.toString.call(timestamp) !== '[object Date]' ||
+      isNaN(timestamp.getTime())
+    ) {
+      throw new Error('El Timestamp persistido para dual-write no es válido.');
+    }
 
     // FASE A: solo Sheets y validaciones locales bajo un lock breve.
     const captura = ejecutarConScriptLockSincronizacionCitaSupabase_(
       function() {
         const origenCaptura = obtenerHojaReconciliacionCitasSupabase_();
-        const candidatoCapturado =
-          capturarUltimaCitaPendienteSincronizacionSupabase_(
-            origenCaptura.hoja,
-            origenCaptura.mapa
+        let candidatoCapturado = capturarCandidatoSupabaseDesdeFilaCita_(
+          origenCaptura.hoja,
+          origenCaptura.mapa,
+          filaEsperada
+        );
+
+        validarPayloadPersistidoSinCatalogosSincronizacionSupabase_(
+          candidatoCapturado
+        );
+
+        if (
+          candidatoCapturado.operationId !== operationIdEsperado ||
+          candidatoCapturado.legacyId !== legacyIdEsperado ||
+          candidatoCapturado.fechaRegistro.getTime() !== timestamp.getTime()
+        ) {
+          throw new Error(
+            'La fila ya no conserva la identidad persistida por guardarCita().'
           );
+        }
+
+        const estadoInicial = candidatoCapturado.syncEstado;
+
+        if (
+          estadoInicial ===
+          SINCRONIZACION_CITA_SUPABASE_ESTADO_SINCRONIZADA_
+        ) {
+          const idExistente = String(
+            candidatoCapturado.supabaseId || ''
+          ).trim();
+
+          if (!idExistente) {
+            throw new Error(
+              'La fila está SINCRONIZADA pero no conserva SUPABASE_ID.'
+            );
+          }
+
+          return {
+            origen: origenCaptura,
+            candidato: candidatoCapturado,
+            estadoInicial: estadoInicial,
+            yaSincronizada: true,
+            supabaseId: idExistente
+          };
+        }
+
+        if (estadoInicial === SINCRONIZACION_CITA_SUPABASE_ESTADO_ERROR_) {
+          const snapshotError = candidatoCapturado;
+
+          origenCaptura.hoja
+            .getRange(
+              filaEsperada,
+              origenCaptura.mapa.SUPABASE_SYNC_ESTADO
+            )
+            .setValue(SINCRONIZACION_CITA_SUPABASE_ESTADO_PENDIENTE_);
+          SpreadsheetApp.flush();
+          candidatoCapturado = capturarCandidatoSupabaseDesdeFilaCita_(
+            origenCaptura.hoja,
+            origenCaptura.mapa,
+            filaEsperada
+          );
+
+          const snapshotConservado =
+            candidatoCapturado.operationId === snapshotError.operationId &&
+            candidatoCapturado.legacyId === snapshotError.legacyId &&
+            candidatoCapturado.fechaRegistro.getTime() ===
+              snapshotError.fechaRegistro.getTime() &&
+            SINCRONIZACION_CITA_SUPABASE_CAMPOS_SNAPSHOT_.every(
+              function(propiedad) {
+                return String(candidatoCapturado.datos[propiedad]) ===
+                  String(snapshotError.datos[propiedad]);
+              }
+            );
+
+          if (!snapshotConservado) {
+            throw new Error(
+              'La fila cambió durante la preparación controlada del retry.'
+            );
+          }
+        } else if (
+          estadoInicial !== SINCRONIZACION_CITA_SUPABASE_ESTADO_PENDIENTE_
+        ) {
+          throw new Error(
+            'La fila tiene un estado técnico de sincronización no admitido.'
+          );
+        }
 
         return {
           origen: origenCaptura,
-          candidato: candidatoCapturado
+          candidato: candidatoCapturado,
+          estadoInicial: estadoInicial,
+          yaSincronizada: false,
+          supabaseId: ''
         };
       }
     );
@@ -459,16 +592,19 @@ function sincronizarUltimaCitaPendienteSupabase() {
     origen = captura.origen;
     candidato = captura.candidato;
 
-    if (!candidato) {
-      throw new Error(
-        'No existe una fila PENDIENTE con identidad y payload persistido válidos.'
-      );
-    }
-
     resultado.fila = candidato.fila;
     resultado.legacyId = candidato.legacyId;
     resultado.operationId = candidato.operationIdEnmascarado;
-    resultado.estadoInicial = candidato.syncEstado;
+    resultado.estadoInicial = captura.estadoInicial;
+
+    if (captura.yaSincronizada) {
+      resultado.supabaseId = captura.supabaseId;
+      resultado.estadoFinal =
+        SINCRONIZACION_CITA_SUPABASE_ESTADO_SINCRONIZADA_;
+      resultado.reutilizada = true;
+      resultado.exito = true;
+      return resultado;
+    }
 
     // FASE B: catálogos, GET, RPC y verificación, siempre sin lock.
     try {
@@ -522,6 +658,53 @@ function sincronizarUltimaCitaPendienteSupabase() {
     if (resultado.estadoFinal === 'ABORTADA') {
       resultado.estadoFinal = 'ABORTADA_SIN_ACTUALIZAR_FILA';
     }
+  }
+
+  return resultado;
+}
+
+/**
+ * Sincroniza una sola cita: la última fila PENDIENTE que supera el preflight.
+ * Requiere CONFIRMAR_SINCRONIZACION_CITA_SUPABASE=SI en Script Properties.
+ */
+function sincronizarUltimaCitaPendienteSupabase() {
+  let resultado = crearResultadoSincronizacionCitaSupabase_();
+
+  try {
+    exigirConfirmacionSincronizacionCitaSupabase_();
+
+    const identidad = ejecutarConScriptLockSincronizacionCitaSupabase_(
+      function() {
+        const origen = obtenerHojaReconciliacionCitasSupabase_();
+        const candidato =
+          capturarUltimaCitaPendienteSincronizacionSupabase_(
+            origen.hoja,
+            origen.mapa
+          );
+
+        if (!candidato) {
+          throw new Error(
+            'No existe una fila PENDIENTE con identidad y payload persistido válidos.'
+          );
+        }
+
+        return {
+          fila: candidato.fila,
+          operationId: candidato.operationId,
+          legacyId: candidato.legacyId,
+          timestamp: candidato.fechaRegistro
+        };
+      }
+    );
+
+    resultado = sincronizarCitaPersistidaSupabase_(
+      identidad.fila,
+      identidad.operationId,
+      identidad.legacyId,
+      identidad.timestamp
+    );
+  } catch (error) {
+    resultado.estadoFinal = 'ABORTADA_SIN_ACTUALIZAR_FILA';
   }
 
   registrarResultadoSincronizacionCitaSupabase_(resultado);

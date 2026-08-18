@@ -786,6 +786,7 @@ let citaGuardadaPendienteLimpieza = false;
 let guardadoEnCurso = false;
 let duplicadoPendiente = null;
 let operationIdCitaActual = null;
+let reintentoSincronizacionCitaPendiente = null;
 
 function generarOperationIdCita() {
   const cripto = window.crypto;
@@ -1179,6 +1180,22 @@ op.dataset.nombre.includes(texto)
     return;
   }
 
+  if (reintentoSincronizacionCitaPendiente) {
+    const contexto = reintentoSincronizacionCitaPendiente;
+
+    guardadoEnCurso = true;
+    btn.disabled = true;
+    btn.innerHTML = 'Reintentando... <span class="loading"></span>';
+
+    ejecutarGuardado(
+      contexto.datos,
+      btn,
+      contexto.originalText,
+      contexto.hora
+    );
+    return;
+  }
+
 
   const sucursalOrigen =
     document.getElementById('sucursalOrigen').value;
@@ -1498,7 +1515,15 @@ fechaFinal = `${dia}/${mes}/${anio}`;
 
       if (respuesta.exito) {
 
-        procesarGuardadoExitoso(respuesta, datos, btn, hora);
+        if (respuesta.sincronizacionSupabase === 'ERROR') {
+          procesarGuardadoPendienteSincronizacion(
+            datos,
+            btn,
+            hora
+          );
+        } else {
+          procesarGuardadoExitoso(respuesta, datos, btn, hora);
+        }
 
       } else {
 
@@ -1657,9 +1682,35 @@ fechaFinal = `${dia}/${mes}/${anio}`;
     );
   }
 
+  function procesarGuardadoPendienteSincronizacion(
+    datos,
+    btn,
+    hora
+  ) {
+    cerrarModalDuplicado();
+    duplicadoPendiente = null;
+    operationIdCitaActual = datos.operationId;
+    reintentoSincronizacionCitaPendiente = {
+      datos: Object.assign({}, datos),
+      originalText: 'Reintentar sincronización',
+      hora: hora
+    };
+    citaGuardadaPendienteLimpieza = false;
+    guardadoEnCurso = false;
+
+    mostrarMensaje(
+      'Cita registrada correctamente. La sincronización está pendiente; puedes intentar nuevamente.',
+      'success'
+    );
+
+    btn.disabled = false;
+    btn.innerText = 'Reintentar sincronización';
+  }
+
   function procesarGuardadoExitoso(respuesta, datos, btn, hora) {
     cerrarModalDuplicado();
     duplicadoPendiente = null;
+    reintentoSincronizacionCitaPendiente = null;
     operationIdCitaActual = null;
     citaGuardadaPendienteLimpieza = true;
 
@@ -1757,6 +1808,7 @@ fechaFinal = `${dia}/${mes}/${anio}`;
 citaGuardadaPendienteLimpieza = false;
 guardadoEnCurso = false;
 operationIdCitaActual = null;
+reintentoSincronizacionCitaPendiente = null;
 
     // Resetear formulario principal
     document.getElementById('citaForm').reset();
