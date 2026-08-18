@@ -81,12 +81,7 @@ function valorVisibleFilaReconciliacionCita_(visibles, mapa, encabezado) {
   return String(visibles[mapa[encabezado] - 1] || '');
 }
 
-function construirPayloadSupabaseDesdeFilaCita_(
-  hoja,
-  mapa,
-  numeroFila,
-  catalogos
-) {
+function capturarCandidatoSupabaseDesdeFilaCita_(hoja, mapa, numeroFila) {
   if (!Number.isInteger(numeroFila) || numeroFila < 2) {
     throw new Error('La fila de reconciliación debe ser mayor o igual a 2.');
   }
@@ -122,10 +117,6 @@ function construirPayloadSupabaseDesdeFilaCita_(
     numeroFila
   );
 
-  if (catalogos) {
-    contexto.catalogos = catalogos;
-  }
-
   const datos = {
     cliente: valorVisibleFilaReconciliacionCita_(visibles, mapa, 'Cliente'),
     proceso: valorVisibleFilaReconciliacionCita_(visibles, mapa, 'Proceso'),
@@ -154,10 +145,10 @@ function construirPayloadSupabaseDesdeFilaCita_(
       'FECHA DE VENTA'
     )
   };
-  const preparacion = prepararEscrituraCitaSupabase_(datos, contexto);
-
   return {
     fila: numeroFila,
+    datos: datos,
+    contexto: contexto,
     operationId: contexto.operationId,
     operationIdEnmascarado:
       enmascararOperationIdReconciliacionCita_(contexto.operationId),
@@ -175,8 +166,36 @@ function construirPayloadSupabaseDesdeFilaCita_(
       mapa,
       'SUPABASE_ID'
     ),
-    preparacion: preparacion
+    preparacion: null
   };
+}
+
+function prepararCandidatoSupabaseDesdeFilaCita_(candidato, catalogos) {
+  const contexto = Object.assign({}, candidato.contexto);
+
+  if (catalogos) {
+    contexto.catalogos = catalogos;
+  }
+
+  return Object.assign({}, candidato, {
+    contexto: contexto,
+    preparacion: prepararEscrituraCitaSupabase_(
+      candidato.datos,
+      contexto
+    )
+  });
+}
+
+function construirPayloadSupabaseDesdeFilaCita_(
+  hoja,
+  mapa,
+  numeroFila,
+  catalogos
+) {
+  return prepararCandidatoSupabaseDesdeFilaCita_(
+    capturarCandidatoSupabaseDesdeFilaCita_(hoja, mapa, numeroFila),
+    catalogos
+  );
 }
 
 function enmascararOperationIdReconciliacionCita_(operationId) {

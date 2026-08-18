@@ -3,7 +3,7 @@
  *
  * Este archivo NO se invoca desde guardarCita(). La única escritura posible
  * requiere confirmación explícita y el RPC transaccional propuesto en
- * supabase/propuestas/insertar_cita_con_destinos.sql.
+ * supabase/migrations/20260818111209_insertar_cita_con_destinos.sql.
  */
 
 const ESCRITURA_CITA_SUPABASE_SOURCE_SYSTEM_ =
