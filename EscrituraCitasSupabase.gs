@@ -1,8 +1,9 @@
 /**
  * Preparación aislada de escritura de citas en Supabase.
  *
- * Este archivo NO se invoca desde guardarCita(). La única escritura posible
- * requiere confirmación explícita y el RPC transaccional propuesto en
+ * guardarCita() invoca esta capa indirectamente mediante la sincronización
+ * controlada. La única escritura posible requiere confirmación interna
+ * server-side y el RPC transaccional definido en
  * supabase/migrations/20260818111209_insertar_cita_con_destinos.sql.
  */
 

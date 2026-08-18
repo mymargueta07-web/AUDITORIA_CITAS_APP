@@ -1,6 +1,6 @@
 /**
- * Lectura paralela de Citas Abiertas desde Supabase.
- * No reemplaza las funciones operativas actuales basadas en Google Sheets.
+ * Lectura operativa de Citas Abiertas desde Supabase.
+ * Google Sheets se conserva como rollback mediante Script Property.
  */
 
 const CITAS_ABIERTAS_SUPABASE_TAMANO_PAGINA_ = 100;
@@ -393,10 +393,24 @@ function probarCitasAbiertasSupabase() {
       })
     };
   });
+  const muestraTecnica = muestra.map(function(cita) {
+    return {
+      ID: cita.ID,
+      Timestamp: cita.Timestamp,
+      Fecha: cita.Fecha,
+      SucursalDestino: cita.SucursalDestino,
+      SucursalOrigen: cita.SucursalOrigen,
+      ESTADO: cita.ESTADO,
+      HORA: cita.HORA,
+      cliente_presente: Boolean(cita.Cliente),
+      numero_presente: Boolean(cita.Numero),
+      destinos: cita.destinos.length
+    };
+  });
 
   Logger.log('CITAS ABIERTAS SUPABASE - PRUEBA');
   Logger.log('TOTAL: ' + citas.length);
-  Logger.log(JSON.stringify(muestra, null, 2));
+  Logger.log(JSON.stringify(muestraTecnica, null, 2));
 
   return muestra;
 }

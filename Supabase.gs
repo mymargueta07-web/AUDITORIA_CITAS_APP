@@ -1,6 +1,7 @@
 /**
- * Capa aislada de solo lectura para Supabase.
- * No se invoca desde los flujos operativos actuales de Google Sheets.
+ * Capa server-side para las lecturas operativas de Supabase.
+ * Las peticiones de esta capa permanecen limitadas a GET; la escritura usa el
+ * RPC controlado definido en EscrituraCitasSupabase.gs.
  */
 
 const SUPABASE_MAXIMO_LIMIT_CITAS_ = 100;
@@ -552,10 +553,22 @@ function probarLecturaCitasSupabase() {
       })
     };
   });
+  const muestraTecnica = muestra.map(function(cita) {
+    return {
+      codigo: cita.codigo,
+      legacy_id: cita.legacy_id,
+      fecha_cita: cita.fecha_cita,
+      hora_cita: cita.hora_cita,
+      estado_codigo: cita.estado_codigo,
+      numero_original_presente: Boolean(cita.numero_original),
+      numero_normalizado_presente: Boolean(cita.numero_normalizado),
+      destinos: cita.destinos.length
+    };
+  });
 
   Logger.log('SUPABASE - PRUEBA LECTURA');
   Logger.log('CITAS RECIBIDAS: ' + citas.length);
-  Logger.log(JSON.stringify(muestra, null, 2));
+  Logger.log(JSON.stringify(muestraTecnica, null, 2));
 
   return muestra;
 }

@@ -92,13 +92,26 @@ function validarPayloadPersistidoSinCatalogosSincronizacionSupabase_(
 
   if (faltantes.length > 0) {
     throw new Error(
-      'La fila PENDIENTE carece de campos obligatorios: ' +
+      'La fila seleccionada carece de campos obligatorios: ' +
       faltantes.join(',') + '.'
     );
   }
 }
 
-function capturarUltimaCitaPendienteSincronizacionSupabase_(hoja, mapa) {
+function capturarUltimaCitaConEstadoSincronizacionSupabase_(
+  hoja,
+  mapa,
+  estadoBuscado
+) {
+  const estadoObjetivo = String(estadoBuscado || '').trim().toUpperCase();
+
+  if (
+    estadoObjetivo !== SINCRONIZACION_CITA_SUPABASE_ESTADO_PENDIENTE_ &&
+    estadoObjetivo !== SINCRONIZACION_CITA_SUPABASE_ESTADO_ERROR_
+  ) {
+    throw new Error('El estado técnico buscado no es válido.');
+  }
+
   for (let fila = hoja.getLastRow(); fila >= 2; fila--) {
     const visibles = hoja
       .getRange(fila, 1, 1, hoja.getLastColumn())
@@ -109,7 +122,7 @@ function capturarUltimaCitaPendienteSincronizacionSupabase_(hoja, mapa) {
       'SUPABASE_SYNC_ESTADO'
     ).trim().toUpperCase();
 
-    if (estado !== SINCRONIZACION_CITA_SUPABASE_ESTADO_PENDIENTE_) {
+    if (estado !== estadoObjetivo) {
       continue;
     }
 
@@ -125,11 +138,27 @@ function capturarUltimaCitaPendienteSincronizacionSupabase_(hoja, mapa) {
       );
       return candidato;
     } catch (error) {
-      // Continúa hasta una fila PENDIENTE con identidad estructural válida.
+      // Continúa hasta una fila del estado pedido con identidad válida.
     }
   }
 
   return null;
+}
+
+function capturarUltimaCitaPendienteSincronizacionSupabase_(hoja, mapa) {
+  return capturarUltimaCitaConEstadoSincronizacionSupabase_(
+    hoja,
+    mapa,
+    SINCRONIZACION_CITA_SUPABASE_ESTADO_PENDIENTE_
+  );
+}
+
+function capturarUltimaCitaErrorSincronizacionSupabase_(hoja, mapa) {
+  return capturarUltimaCitaConEstadoSincronizacionSupabase_(
+    hoja,
+    mapa,
+    SINCRONIZACION_CITA_SUPABASE_ESTADO_ERROR_
+  );
 }
 
 function consultarCitaRemotaSincronizacionSupabase_(candidato) {
@@ -685,6 +714,54 @@ function sincronizarUltimaCitaPendienteSupabase() {
         if (!candidato) {
           throw new Error(
             'No existe una fila PENDIENTE con identidad y payload persistido válidos.'
+          );
+        }
+
+        return {
+          fila: candidato.fila,
+          operationId: candidato.operationId,
+          legacyId: candidato.legacyId,
+          timestamp: candidato.fechaRegistro
+        };
+      }
+    );
+
+    resultado = sincronizarCitaPersistidaSupabase_(
+      identidad.fila,
+      identidad.operationId,
+      identidad.legacyId,
+      identidad.timestamp
+    );
+  } catch (error) {
+    resultado.estadoFinal = 'ABORTADA_SIN_ACTUALIZAR_FILA';
+  }
+
+  registrarResultadoSincronizacionCitaSupabase_(resultado);
+  return resultado;
+}
+
+/**
+ * Reintenta una sola cita: la última fila ERROR con identidad persistida
+ * válida. Requiere la misma confirmación administrativa que la sincronización
+ * manual de filas PENDIENTE.
+ */
+function reintentarUltimaCitaErrorSupabase() {
+  let resultado = crearResultadoSincronizacionCitaSupabase_();
+
+  try {
+    exigirConfirmacionSincronizacionCitaSupabase_();
+
+    const identidad = ejecutarConScriptLockSincronizacionCitaSupabase_(
+      function() {
+        const origen = obtenerHojaReconciliacionCitasSupabase_();
+        const candidato = capturarUltimaCitaErrorSincronizacionSupabase_(
+          origen.hoja,
+          origen.mapa
+        );
+
+        if (!candidato) {
+          throw new Error(
+            'No existe una fila ERROR con identidad y payload persistido válidos.'
           );
         }
 

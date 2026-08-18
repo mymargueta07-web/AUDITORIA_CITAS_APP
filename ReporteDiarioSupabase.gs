@@ -1,7 +1,7 @@
 /**
- * Implementación paralela híbrida del Reporte Diario.
- * RegistroCitas se consulta en Supabase y Atención al Cliente permanece
- * en Google Sheets. No reemplaza todavía la función operativa.
+ * Implementación operativa híbrida del Reporte Diario.
+ * RegistroCitas se consulta en Supabase y Atención al Cliente permanece en
+ * Google Sheets; el rollback completo se controla mediante Script Property.
  */
 
 const REPORTE_DIARIO_SUPABASE_TAMANO_PAGINA_ = 100;

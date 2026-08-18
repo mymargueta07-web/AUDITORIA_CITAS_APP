@@ -201,27 +201,23 @@ function construirMuestraDryRun(seleccionados) {
 
     return {
       source_system: SOURCE_SYSTEM,
-      source_record_key: cita.source_record_key,
       legacy_id: cita.legacy_id,
       fecha_registro: cita.fecha_registro,
-      cliente: cita.cliente,
-      numero_original: cita.numero_original,
-      proceso_texto: cita.proceso_texto,
-      proceso_resuelto: cita.proceso_resuelto,
-      precio_texto: cita.precio_texto,
-      precio_monto: cita.precio_monto,
-      extras: cita.extras_texto,
+      source_record_key_presente: Boolean(cita.source_record_key),
+      cliente_presente: Boolean(cita.cliente),
+      numero_original_presente: Boolean(cita.numero_original),
+      numero_normalizado_presente: Boolean(cita.numero_normalizado),
+      proceso_resuelto: Boolean(cita.proceso_resuelto),
+      precio_presente: Boolean(cita.precio_texto),
+      extras_presentes: Boolean(cita.extras_texto),
       fecha_cita: cita.fecha_cita,
       cita_abierta: cita.cita_abierta,
       hora_cita: cita.hora_cita,
-      sucursal_destino_texto_legacy: cita.sucursal_destino_texto_legacy,
-      asesor_texto: cita.asesor_texto,
-      asesor_resuelto: cita.asesor_resuelto,
-      origen_texto: cita.origen_texto,
-      origen_resuelto: cita.origen_resuelto,
-      sucursal_origen_texto: cita.sucursal_origen_texto,
-      sucursal_origen_resuelta: cita.sucursal_origen_resuelta,
-      estado_codigo: cita.estado_resuelto,
+      destinos_resueltos: item.destinos.length,
+      asesor_resuelto: Boolean(cita.asesor_resuelto),
+      origen_resuelto: Boolean(cita.origen_resuelto),
+      sucursal_origen_resuelta: Boolean(cita.sucursal_origen_resuelta),
+      estado_resuelto: Boolean(cita.estado_resuelto),
       fecha_venta: cita.fecha_venta
     };
   });
@@ -516,10 +512,14 @@ async function ejecutarPreflight(seleccionados, reporte) {
   console.log('FILAS CITA_DESTINOS QUE SE CREARÍAN:', reporte.filas_cita_destinos_que_se_crearian);
   console.log('PAYLOADS VÁLIDOS:', reporte.payloads_validos);
   console.log('ERRORES:', reporte.errores.length);
-  console.log('MUESTRA PUBLIC.CITAS:');
-  console.log(JSON.stringify(reporte.muestra_payloads_citas, null, 2));
-  console.log('MUESTRA CITA_DESTINOS:');
-  console.log(JSON.stringify(reporte.muestra_cita_destinos, null, 2));
+  console.log(
+    'MUESTRA PUBLIC.CITAS OMITIDA POR PRIVACIDAD:',
+    reporte.muestra_payloads_citas.length
+  );
+  console.log(
+    'MUESTRA CITA_DESTINOS OMITIDA POR SEGURIDAD:',
+    reporte.muestra_cita_destinos.length
+  );
   console.log(
     reporte.errores.length === 0
       ? 'RESULTADO: PRE-FLIGHT APROBADO'

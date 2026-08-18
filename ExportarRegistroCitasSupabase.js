@@ -111,14 +111,17 @@ function probarExportacionRegistroCitasSupabase() {
           id_legacy: registro.id_legacy,
           fecha_cita: registro.fecha_cita,
           hora_cita: registro.hora_cita,
-          sucursal_destino_texto:
-            registro.sucursal_destino_texto,
           destinos_candidatos:
-            registro.destinos_candidatos,
-          numero_original: registro.numero_original,
-          numero_normalizado:
-            registro.numero_normalizado,
-          advertencias: registro.advertencias
+            Array.isArray(registro.destinos_candidatos)
+              ? registro.destinos_candidatos.length
+              : 0,
+          numero_original_presente:
+            Boolean(registro.numero_original),
+          numero_normalizado_presente:
+            Boolean(registro.numero_normalizado),
+          advertencias: Array.isArray(registro.advertencias)
+            ? registro.advertencias.length
+            : 0
         };
       }),
       null,

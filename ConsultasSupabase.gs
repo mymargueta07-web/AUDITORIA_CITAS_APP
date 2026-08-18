@@ -1,6 +1,6 @@
 /**
- * Consulta paralela de citas desde Supabase.
- * No reemplaza ni invoca las consultas actuales de Google Sheets.
+ * Lectura operativa de Consultar Citas desde Supabase.
+ * Google Sheets se conserva como rollback mediante Script Property.
  */
 
 const CONSULTAS_SUPABASE_TAMANO_PAGINA_ = 100;
@@ -594,10 +594,23 @@ function probarConsultaCitasSupabase() {
       })
     };
   });
+  const muestraTecnica = muestra.map(function(cita) {
+    return {
+      ID: cita.ID,
+      Timestamp: cita.Timestamp,
+      Fecha: cita.Fecha,
+      SucursalDestino: cita.SucursalDestino,
+      SucursalOrigen: cita.SucursalOrigen,
+      ESTADO: cita.ESTADO,
+      cliente_presente: Boolean(cita.Cliente),
+      numero_presente: Boolean(cita.Numero),
+      destinos: cita.destinos.length
+    };
+  });
 
   Logger.log('CONSULTA CITAS SUPABASE - PRUEBA');
   Logger.log('TOTAL: ' + citas.length);
-  Logger.log(JSON.stringify(muestra, null, 2));
+  Logger.log(JSON.stringify(muestraTecnica, null, 2));
 
   return muestra;
 }

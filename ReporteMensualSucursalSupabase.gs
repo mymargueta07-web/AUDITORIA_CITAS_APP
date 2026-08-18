@@ -1,6 +1,6 @@
 /**
- * Lectura paralela del Reporte Mensual por Sucursal desde Supabase.
- * No reemplaza la función operativa actual basada en Google Sheets.
+ * Lectura operativa del Reporte Mensual por Sucursal desde Supabase.
+ * Google Sheets se conserva como rollback mediante Script Property.
  */
 
 const RMS_SUPABASE_TAMANO_PAGINA_ = 100;
@@ -207,7 +207,7 @@ function compararReporteMensualSheetsVsSupabase() {
   Logger.log('ASESORES SHEETS: ' + sheets.resumen.totalAsesores);
   Logger.log('ASESORES SUPABASE: ' + supabase.resumen.totalAsesores);
   Logger.log('DIFERENCIAS: ' + totalDiferencias);
-  Logger.log(JSON.stringify(diferenciasAsesores.ejemplos, null, 2));
+  Logger.log('DIFERENCIAS ASESORES: ' + diferenciasAsesores.cantidad);
 
   return {
     sheets: sheets.resumen,
