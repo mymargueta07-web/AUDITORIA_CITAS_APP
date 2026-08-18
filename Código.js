@@ -458,6 +458,136 @@ function buscarCitasDuplicadas_(hoja, datosCita) {
   return coincidencias;
 }
 
+const ENCABEZADOS_TECNICOS_CITA_ = [
+  'OperationId',
+  'SUPABASE_SYNC_ESTADO',
+  'SUPABASE_ID',
+  'SUPABASE_SYNC_ULTIMO_INTENTO',
+  'SUPABASE_SYNC_ERROR'
+];
+
+const CAMPOS_PAYLOAD_IDEMPOTENTE_CITA_ = [
+  { propiedad: 'cliente', encabezado: 'Cliente' },
+  { propiedad: 'proceso', encabezado: 'Proceso' },
+  { propiedad: 'numero', encabezado: 'Numero' },
+  { propiedad: 'precio', encabezado: 'Precio' },
+  { propiedad: 'extras', encabezado: 'Extras' },
+  { propiedad: 'fecha', encabezado: 'Fecha' },
+  { propiedad: 'sucursalDestino', encabezado: 'SucursalDestino' },
+  { propiedad: 'asesor', encabezado: 'Asesor' },
+  { propiedad: 'nota', encabezado: 'Nota' },
+  { propiedad: 'origen', encabezado: 'Origen' },
+  { propiedad: 'sucursalOrigen', encabezado: 'SucursalOrigen' },
+  { propiedad: 'hora', encabezado: 'HORA' }
+];
+
+function normalizarOperationIdCita_(operationId) {
+  const valor = String(operationId || '').trim().toLowerCase();
+
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
+      valor
+    )
+  ) {
+    throw new Error('operationId es obligatorio y debe ser un UUID válido.');
+  }
+
+  return valor;
+}
+
+function asegurarEncabezadosTecnicosCita_(hoja, mapa) {
+  let mapaActual = mapa;
+
+  ENCABEZADOS_TECNICOS_CITA_.forEach(function(encabezado) {
+    if (Object.prototype.hasOwnProperty.call(mapaActual, encabezado)) {
+      return;
+    }
+
+    hoja
+      .getRange(1, hoja.getLastColumn() + 1)
+      .setValue(encabezado);
+
+    mapaActual = obtenerMapaEncabezados_(hoja);
+  });
+
+  return mapaActual;
+}
+
+function buscarFilaPorOperationId_(hoja, mapa, operationId) {
+  const columnaOperationId = obtenerColumnaObligatoria_(
+    mapa,
+    'OperationId'
+  );
+  const ultimaFila = hoja.getLastRow();
+
+  if (ultimaFila < 2) {
+    return null;
+  }
+
+  const valores = hoja
+    .getRange(2, columnaOperationId, ultimaFila - 1, 1)
+    .getValues();
+  const filasEncontradas = [];
+
+  valores.forEach(function(fila, indice) {
+    if (String(fila[0] || '').trim().toLowerCase() === operationId) {
+      filasEncontradas.push(indice + 2);
+    }
+  });
+
+  if (filasEncontradas.length > 1) {
+    throw new Error(
+      'OperationId está repetido en RegistroCitas y requiere revisión manual.'
+    );
+  }
+
+  return filasEncontradas.length === 1
+    ? filasEncontradas[0]
+    : null;
+}
+
+function obtenerCitaPersistidaPorFila_(hoja, mapa, numeroFila) {
+  const rango = hoja.getRange(
+    numeroFila,
+    1,
+    1,
+    hoja.getLastColumn()
+  );
+  const valores = rango.getValues()[0];
+  const visibles = rango.getDisplayValues()[0];
+  const payload = {};
+
+  CAMPOS_PAYLOAD_IDEMPOTENTE_CITA_.forEach(function(campo) {
+    payload[campo.propiedad] = String(
+      visibles[mapa[campo.encabezado] - 1] || ''
+    );
+  });
+
+  return {
+    fila: numeroFila,
+    id: String(visibles[mapa.ID - 1] || ''),
+    timestamp: valores[mapa.Timestamp - 1],
+    payload: payload
+  };
+}
+
+function obtenerDiferenciasPayloadIdempotenteCita_(datosCita, persistida) {
+  return CAMPOS_PAYLOAD_IDEMPOTENTE_CITA_
+    .filter(function(campo) {
+      const solicitado = String(
+        datosCita[campo.propiedad] === null ||
+        datosCita[campo.propiedad] === undefined
+          ? ''
+          : datosCita[campo.propiedad]
+      );
+
+      return solicitado !== persistida.payload[campo.propiedad];
+    })
+    .map(function(campo) {
+      return campo.propiedad;
+    });
+}
+
 function guardarCita(datosCita) {
   const lock = LockService.getScriptLock();
 
@@ -519,6 +649,8 @@ function guardarCita(datosCita) {
       mapa = obtenerMapaEncabezados_(hojaDestino);
     }
 
+    mapa = asegurarEncabezadosTecnicosCita_(hojaDestino, mapa);
+
     const encabezadosObligatorios = [
       'ID',
       'Timestamp',
@@ -536,11 +668,61 @@ function guardarCita(datosCita) {
       'ESTADO',
       'FECHA DE VENTA',
       'HORA'
-    ];
+    ].concat(ENCABEZADOS_TECNICOS_CITA_);
 
     encabezadosObligatorios.forEach(function(nombreEncabezado) {
       obtenerColumnaObligatoria_(mapa, nombreEncabezado);
     });
+
+    hojaDestino
+      .getRange(1, mapa.OperationId, totalFilasHoja, 1)
+      .setNumberFormat('@');
+
+    const operationId = normalizarOperationIdCita_(
+      datosCita && datosCita.operationId
+    );
+    const filaExistente = buscarFilaPorOperationId_(
+      hojaDestino,
+      mapa,
+      operationId
+    );
+
+    if (filaExistente !== null) {
+      const citaPersistida = obtenerCitaPersistidaPorFila_(
+        hojaDestino,
+        mapa,
+        filaExistente
+      );
+      const diferencias = obtenerDiferenciasPayloadIdempotenteCita_(
+        datosCita,
+        citaPersistida
+      );
+
+      if (diferencias.length > 0) {
+        return {
+          exito: false,
+          mensaje: 'OperationId ya existe con un payload diferente'
+        };
+      }
+
+      if (
+        Object.prototype.toString.call(citaPersistida.timestamp) !==
+          '[object Date]' ||
+        isNaN(citaPersistida.timestamp.getTime())
+      ) {
+        return {
+          exito: false,
+          mensaje: 'OperationId existe, pero su Timestamp no es válido'
+        };
+      }
+
+      return {
+        exito: true,
+        mensaje: 'Cita registrada correctamente',
+        id: citaPersistida.id,
+        reutilizada: true
+      };
+    }
 
     if (datosCita.forzarDuplicado !== true) {
       const coincidencias = buscarCitasDuplicadas_(hojaDestino, datosCita);
@@ -593,6 +775,11 @@ function guardarCita(datosCita) {
     fila[mapa.ESTADO - 1] = 'EN ESPERA DE CITA';
     fila[mapa['FECHA DE VENTA'] - 1] = '';
     fila[mapa.HORA - 1] = datosCita.hora || '';
+    fila[mapa.OperationId - 1] = operationId;
+    fila[mapa.SUPABASE_SYNC_ESTADO - 1] = 'PENDIENTE';
+    fila[mapa.SUPABASE_ID - 1] = '';
+    fila[mapa.SUPABASE_SYNC_ULTIMO_INTENTO - 1] = '';
+    fila[mapa.SUPABASE_SYNC_ERROR - 1] = '';
 
     hojaDestino.appendRow(fila);
     // Reaplicar validación por si la nueva fila no la heredó.
@@ -600,7 +787,12 @@ function guardarCita(datosCita) {
       .getRange(2, mapa.ESTADO, hojaDestino.getMaxRows() - 1, 1)
       .setDataValidation(reglaValidacion);
 
-    return { exito: true, mensaje: 'Cita registrada correctamente', id: idFormateado };
+    return {
+      exito: true,
+      mensaje: 'Cita registrada correctamente',
+      id: idFormateado,
+      reutilizada: false
+    };
   } catch (error) {
     return { exito: false, mensaje: error.toString() };
   } finally {

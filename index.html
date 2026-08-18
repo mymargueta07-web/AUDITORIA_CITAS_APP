@@ -785,6 +785,46 @@ let sucursalesDisponibles = [];
 let citaGuardadaPendienteLimpieza = false;
 let guardadoEnCurso = false;
 let duplicadoPendiente = null;
+let operationIdCitaActual = null;
+
+function generarOperationIdCita() {
+  const cripto = window.crypto;
+
+  if (!cripto || typeof cripto.getRandomValues !== 'function') {
+    throw new Error(
+      'El navegador no permite generar un identificador seguro para la cita.'
+    );
+  }
+
+  if (typeof cripto.randomUUID === 'function') {
+    return cripto.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+  cripto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  const hexadecimal = Array.from(bytes, function(valor) {
+    return valor.toString(16).padStart(2, '0');
+  });
+
+  return (
+    hexadecimal.slice(0, 4).join('') + '-' +
+    hexadecimal.slice(4, 6).join('') + '-' +
+    hexadecimal.slice(6, 8).join('') + '-' +
+    hexadecimal.slice(8, 10).join('') + '-' +
+    hexadecimal.slice(10, 16).join('')
+  );
+}
+
+function obtenerOperationIdCitaActual() {
+  if (!operationIdCitaActual) {
+    operationIdCitaActual = generarOperationIdCita();
+  }
+
+  return operationIdCitaActual;
+}
 
   
   window.addEventListener('load', function() {
@@ -1392,7 +1432,18 @@ fechaFinal = `${dia}/${mes}/${anio}`;
   // DATOS
   // =====================================================
 
+  let operationId;
+
+  try {
+    operationId = obtenerOperationIdCitaActual();
+  } catch (error) {
+    mostrarMensaje(error.message || error.toString(), 'error');
+    return;
+  }
+
   const datos = {
+
+    operationId: operationId,
 
     cliente: cliente,
 
@@ -1582,6 +1633,7 @@ fechaFinal = `${dia}/${mes}/${anio}`;
     }
 
     duplicadoPendiente = null;
+    operationIdCitaActual = null;
   }
 
   function confirmarGuardadoDuplicado() {
@@ -1608,6 +1660,7 @@ fechaFinal = `${dia}/${mes}/${anio}`;
   function procesarGuardadoExitoso(respuesta, datos, btn, hora) {
     cerrarModalDuplicado();
     duplicadoPendiente = null;
+    operationIdCitaActual = null;
     citaGuardadaPendienteLimpieza = true;
 
     mostrarResumenCita(
@@ -1703,6 +1756,7 @@ fechaFinal = `${dia}/${mes}/${anio}`;
 // Permitir un nuevo registro
 citaGuardadaPendienteLimpieza = false;
 guardadoEnCurso = false;
+operationIdCitaActual = null;
 
     // Resetear formulario principal
     document.getElementById('citaForm').reset();
