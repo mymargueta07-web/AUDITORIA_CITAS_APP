@@ -8,6 +8,40 @@
  * Busca todas las citas registradas con un número de contacto.
  */
 function buscarCitasPorNumero(numeroBuscado) {
+  const fuente = obtenerFuenteRecuperarCita_();
+
+  if (fuente === 'SUPABASE') {
+    return buscarCitasPorNumeroSupabase_(numeroBuscado);
+  }
+
+  return buscarCitasPorNumeroSheets_(numeroBuscado);
+}
+
+function obtenerFuenteRecuperarCita_() {
+  const valorConfigurado = PropertiesService
+    .getScriptProperties()
+    .getProperty('FUENTE_RECUPERAR_CITA');
+  const fuente = valorConfigurado === null
+    ? 'SHEETS'
+    : String(valorConfigurado).trim().toUpperCase();
+
+  if (fuente !== 'SHEETS' && fuente !== 'SUPABASE') {
+    throw new Error(
+      'Valor inválido para FUENTE_RECUPERAR_CITA: ' + fuente +
+      '. Valores permitidos: SHEETS o SUPABASE.'
+    );
+  }
+
+  return fuente;
+}
+
+function probarFuenteRecuperarCita() {
+  Logger.log(
+    'FUENTE RECUPERAR CITA: ' + obtenerFuenteRecuperarCita_()
+  );
+}
+
+function buscarCitasPorNumeroSheets_(numeroBuscado) {
   try {
 
     const numeroConsulta = normalizarNumeroCita_(numeroBuscado);

@@ -318,6 +318,89 @@ function obtenerSucursalesVentasCerradasReporteDiarioSupabase_(opciones) {
   return supabaseRequest_(ruta, { method: 'GET' });
 }
 
+function obtenerCamposRecuperarCitaSupabase_() {
+  return [
+    'id',
+    'source_record_key',
+    'legacy_id',
+    'cliente',
+    'numero_original',
+    'numero_normalizado',
+    'proceso_texto',
+    'precio_texto',
+    'extras',
+    'fecha_cita',
+    'cita_abierta',
+    'hora_cita',
+    'hora_texto_original',
+    'sucursal_destino_texto_legacy',
+    'asesor_texto',
+    'nota',
+    'origen_texto',
+    'sucursal_origen_texto',
+    'estado_codigo',
+    'fecha_venta'
+  ];
+}
+
+function obtenerCitasRecuperarPorNumeroSupabase_(opciones) {
+  const opcionesConsulta = opciones || {};
+  const limit = normalizarEnteroSupabase_(
+    opcionesConsulta.limit,
+    100,
+    SUPABASE_MAXIMO_LIMIT_CITAS_
+  );
+  const offset = normalizarEnteroSupabase_(
+    opcionesConsulta.offset,
+    0,
+    Number.MAX_SAFE_INTEGER
+  );
+  const numeroNormalizado = String(
+    opcionesConsulta.numeroNormalizado || ''
+  ).trim();
+  const compararUltimosOcho =
+    opcionesConsulta.compararUltimosOcho === true;
+
+  if (!/^\d+$/.test(numeroNormalizado)) {
+    throw new Error(
+      'La búsqueda de citas requiere un número normalizado con dígitos.'
+    );
+  }
+
+  const operador = compararUltimosOcho ? 'like.*' : 'eq.';
+  const ruta =
+    'citas?select=' + obtenerCamposRecuperarCitaSupabase_().join(',') +
+    '&numero_normalizado=' + operador +
+    encodeURIComponent(numeroNormalizado) +
+    '&order=fecha_registro.asc,id.asc' +
+    '&limit=' + limit +
+    '&offset=' + offset;
+
+  return supabaseRequest_(ruta, { method: 'GET' });
+}
+
+function obtenerCitasRecuperarNumeroOriginalCeroSupabase_(opciones) {
+  const opcionesConsulta = opciones || {};
+  const limit = normalizarEnteroSupabase_(
+    opcionesConsulta.limit,
+    100,
+    SUPABASE_MAXIMO_LIMIT_CITAS_
+  );
+  const offset = normalizarEnteroSupabase_(
+    opcionesConsulta.offset,
+    0,
+    Number.MAX_SAFE_INTEGER
+  );
+  const ruta =
+    'citas?select=' + obtenerCamposRecuperarCitaSupabase_().join(',') +
+    '&numero_original=eq.0' +
+    '&order=fecha_registro.asc,id.asc' +
+    '&limit=' + limit +
+    '&offset=' + offset;
+
+  return supabaseRequest_(ruta, { method: 'GET' });
+}
+
 function obtenerDestinosCitasSupabase_(idsCitas) {
   const ids = Array.from(new Set(
     (idsCitas || []).filter(function(id) {
